@@ -69,3 +69,5 @@ The build links prebuilt FFmpeg instead of compiling it from source (which takes
 GPL-3.0. The engine is a derivative work of UxPlay / AirPlay-Windows, so the whole project stays GPL-3.0. See [`LICENSE`](LICENSE) and [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md), including the note about the FairPlay blobs.
 
 "AirPlay" is a trademark of Apple Inc. This project is not affiliated with or endorsed by Apple. The name appears here only to describe what the software is compatible with.
+
+"Airglass" is also the name of an unrelated product by Mobeus; this project is independent of it and shares no code or affiliation.

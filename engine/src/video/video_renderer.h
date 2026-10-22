@@ -60,7 +60,7 @@ public:
 
     // Initialise SDL, create the window at a default size, start the
     // rendering thread. Returns false on SDL failure.
-    bool start(const std::string& title = "AirPlay-Windows");
+    bool start(const std::string& title = "AirGlass");
 
     // Tell the thread to exit, join it, tear down SDL.
     void stop();

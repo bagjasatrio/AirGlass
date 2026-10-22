@@ -62,3 +62,7 @@ so the GPL build keeps the licensing story consistent with the project license.
 "AirPlay", "iPhone", "iPad", "Apple TV" are trademarks of Apple Inc. AirGlass
 is not affiliated with, endorsed by, or certified by Apple. The terms appear
 only to describe compatibility.
+
+"Airglass" (one word, capital A) is also used by Mobeus for an unrelated
+transparent-computing product. AirGlass shares no code, trademark, or
+affiliation with it.

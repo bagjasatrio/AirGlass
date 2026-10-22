@@ -1,4 +1,4 @@
-// AirPlay-Windows — first-skeleton entry point.
+// AirGlass — AirPlay receiver for Windows (fork of AirPlay-Windows).
 //
 // Responsibilities of main():
 //   1. Initialise Winsock (net::global_init).
@@ -147,7 +147,7 @@ int main(int argc, char** argv) {
         if (result == ap::platform::SingleInstance::Result::Secondary) return 0;
         if (result == ap::platform::SingleInstance::Result::Error) {
             MessageBoxW(nullptr, L"Unable to initialize the single application instance.",
-                        L"AirPlay-Windows", MB_OK | MB_ICONERROR);
+                        L"AirGlass", MB_OK | MB_ICONERROR);
             return 1;
         }
     }
@@ -262,8 +262,13 @@ int main(int argc, char** argv) {
             // future unknown-arg paths don't trip on it.
         } else if (arg == "--help" || arg == "-h") {
             std::puts(
-                "AirPlay-Windows [--log] [--hls-proxy-playback]\n"
+                "AirGlass [--log] [--preset NAME] [--probe] [--hls-proxy-playback]\n"
                 "                [--mirror-res WxH] [--mirror-hwaccel]\n"
+                "  --preset NAME         quality preset: 720p60 | 1080p30 |\n"
+                "                        1080p60 | auto. Saved for the next launch.\n"
+                "                        Skips the pre-flight chooser.\n"
+                "  --probe               print machine/network capability report\n"
+                "                        and exit (no server, no firewall change)\n"
                 "  --log / --verbose     print init/runtime logs to stderr\n"
                 "                        (off by default in the released\n"
                 "                        binary)\n"
@@ -353,7 +358,7 @@ int main(int argc, char** argv) {
     ctx.public_key = identity->public_key();
     ctx.identity   = identity.get();
 
-    LOG_INFO << "=== AirPlay-Windows skeleton ===";
+    LOG_INFO << "=== AirGlass receiver ===";
     LOG_INFO << "name="     << ctx.name;
     LOG_INFO << "deviceid=" << ctx.deviceid;
     const std::string local_ip   = ap::net::primary_ipv4();
@@ -368,7 +373,7 @@ int main(int argc, char** argv) {
     // frames once an iPhone connects.
     ap::video::VideoRenderer renderer;
     renderer.set_live_settings(&live_settings);
-    if (!renderer.start("AirPlay-Windows")) {
+    if (!renderer.start("AirGlass")) {
         LOG_WARN << "VideoRenderer could not start — running headless";
     }
     // Prefer the v4 address on the idle screen (shorter, more familiar),
