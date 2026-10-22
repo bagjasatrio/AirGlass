@@ -64,6 +64,14 @@ In OBS: **Sources → + → Window Capture → Window: `AirGlass Mirror`**. Use 
 
 Press `D` in the main window to toggle the detached mirror on and off mid-session. Enabling it mid-session while hardware decoding may require reconnecting the iPhone (the decoder rebinds its D3D11 device to the mirror window); starting with `--obs` avoids that entirely.
 
+### Moving and resizing it
+
+The window is borderless, so it has no title bar — grab the **video itself** and drag: free placement, any monitor, any position. The outer 6 px behaves as a resize border on all edges and corners.
+
+### When the phone screen sleeps or locks
+
+iOS ends the AirPlay session when the display turns off, exactly the way it does on a real disconnect. AirGlass does not treat that as a disconnect: the mirror window stays up and turns **black**, the session stays listed as connected, and the main window shows `Phone screen off — still connected; unlock to resume mirroring`. Wake the phone and the picture comes back without re-picking the receiver. Pressing **Disconnect** still ends the session properly.
+
 The mirror window is intentionally **not** always-on-top: a topmost borderless window covers the UI on a single screen, and OBS captures it regardless.
 
 ## Build

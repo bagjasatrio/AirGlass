@@ -402,6 +402,32 @@ AVBufferRef* VideoRenderer::gpu_device_ref() {
     return running_.load() && gpu_device_ ? av_buffer_ref(gpu_device_) : nullptr;
 }
 
+#if SDL_VERSION_ATLEAST(2, 0, 5)
+// AirGlass: the detached mirror window is borderless, so it has no title bar to
+// grab — without this the window cannot be moved at all. Resize zones live in a
+// 6 px border; everywhere else drags the window (free placement, any monitor).
+static SDL_HitTestResult SDLCALL airglass_mirror_hit_test(SDL_Window* win,
+                                                          const SDL_Point* area,
+                                                          void* /*data*/) {
+    int w = 0, h = 0;
+    SDL_GetWindowSize(win, &w, &h);
+    const int edge = 6;
+    const bool left   = area->x < edge;
+    const bool right  = area->x >= w - edge;
+    const bool top    = area->y < edge;
+    const bool bottom = area->y >= h - edge;
+    if (top && left)     return SDL_HITTEST_RESIZE_TOPLEFT;
+    if (top && right)    return SDL_HITTEST_RESIZE_TOPRIGHT;
+    if (bottom && left)  return SDL_HITTEST_RESIZE_BOTTOMLEFT;
+    if (bottom && right) return SDL_HITTEST_RESIZE_BOTTOMRIGHT;
+    if (top)             return SDL_HITTEST_RESIZE_TOP;
+    if (bottom)          return SDL_HITTEST_RESIZE_BOTTOM;
+    if (left)            return SDL_HITTEST_RESIZE_LEFT;
+    if (right)           return SDL_HITTEST_RESIZE_RIGHT;
+    return SDL_HITTEST_DRAGGABLE;
+}
+#endif
+
 bool VideoRenderer::start(const std::string& title) {
     running_ = true;
     thread_  = std::thread(&VideoRenderer::run, this, title);
@@ -458,7 +484,23 @@ bool VideoRenderer::in_flush_grace() const {
     return now_ns < until;
 }
 
+// AirGlass: called from the RTSP TEARDOWN path before the session state is
+// released. If the ending session was a mirror, remember it instead of wiping
+// the UI: the phone sleeping/locking is not a user disconnect, and it should
+// look like a black screen, not a dropped connection.
+bool VideoRenderer::begin_mirror_suspend() {
+    DeviceInfo info{};
+    const bool is_mirror = active_device_snapshot(info) && info.kind == "Mirror";
+    if (is_mirror) {
+        mirror_suspended_.store(true, std::memory_order_relaxed);
+        LOG_INFO << "mirror session suspended (phone screen off/locked): keeping "
+                    "the mirror window, rendering black";
+    }
+    return is_mirror;
+}
+
 void VideoRenderer::clear_session() {
+    mirror_suspended_.store(false, std::memory_order_relaxed);
     LOG_INFO << "VideoRenderer clear_session: reset cover / metadata / progress / video frame";
     audio_control_available_.store(false);
     audio_command_pending_.store(false);
@@ -561,6 +603,8 @@ void VideoRenderer::push_avframe(const AVFrame* src, int64_t origin_ns) {
         has_frame_      = false;       // legacy plane-buffer slot empty
         frame_is_nv12_  = false;
         has_avframe_    = true;
+        // AirGlass: frames are flowing again — the phone woke up / unlocked.
+        mirror_suspended_.store(false, std::memory_order_relaxed);
         frame_origin_ns_= origin_ns;
         cv_.notify_one();
     }
@@ -615,6 +659,16 @@ void VideoRenderer::clear_active_device() {
 bool VideoRenderer::clear_session_if_active(const std::string& session_id) {
     std::lock_guard<std::mutex> lock(device_mtx_);
     if (!has_device_ || device_.session_id != session_id) return false;
+    // AirGlass: the phone locking/sleeping closes the AirPlay session exactly
+    // like a real disconnect. For a mirror session, keep the UI state and render
+    // black instead: unlocking the phone resumes mirroring and the user does not
+    // have to pick the receiver again.
+    if (device_.kind == "Mirror") {
+        mirror_suspended_.store(true, std::memory_order_relaxed);
+        LOG_INFO << "Connection ended while mirroring: suspended to black, UI kept "
+                    "(session=" << session_id << ")";
+        return true;
+    }
     clear_session();
     has_device_ = false;
     device_ = {};
@@ -700,6 +754,8 @@ void VideoRenderer::push_frame(const uint8_t* y, int y_stride,
     frame_w_         = width;
     frame_h_         = height;
     has_frame_       = true;
+    // AirGlass: frames flowing again (phone awake/unlocked).
+    mirror_suspended_.store(false, std::memory_order_relaxed);
     frame_is_nv12_   = false;
     frame_origin_ns_ = origin_ns;
     cv_.notify_one();
@@ -742,6 +798,8 @@ void VideoRenderer::push_frame_nv12(const uint8_t* y,  int y_stride,
     frame_w_         = width;
     frame_h_         = height;
     has_frame_       = true;
+    // AirGlass: frames flowing again (phone awake/unlocked).
+    mirror_suspended_.store(false, std::memory_order_relaxed);
     frame_is_nv12_   = true;
     frame_origin_ns_ = origin_ns;
     cv_.notify_one();
@@ -866,6 +924,9 @@ void VideoRenderer::run(const std::string& title) {
             mirror_window = nullptr;
             return false;
         }
+#if SDL_VERSION_ATLEAST(2, 0, 5)
+        SDL_SetWindowHitTest(mirror_window, airglass_mirror_hit_test, nullptr);
+#endif
         mirror_gpu_video.init(mirror_renderer);
         LOG_INFO << "detach: mirror window up (" << w << 'x' << h << ", borderless)";
         return true;
@@ -1602,6 +1663,12 @@ void VideoRenderer::run(const std::string& title) {
         const bool has_active_dev = active_device_snapshot(active_dev);
         const bool show_video =
             video_tex && active_dev.kind != "Audio" && (video_fresh || has_active_dev || !playing_now);
+        // AirGlass: a suspended mirror (phone asleep/locked) keeps the window on
+        // screen but must render black — the session is gone, only the memory of
+        // it is left, so drawing video_tex would freeze the last picture.
+        const bool suspended    = mirror_suspended();
+        const bool draw_video   = show_video && !suspended;
+        const bool stage_visible = show_video || suspended;
 
         int win_w = 0, win_h = 0;
         SDL_GetRendererOutputSize(renderer, &win_w, &win_h);
@@ -1681,7 +1748,7 @@ void VideoRenderer::run(const std::string& title) {
             !playing_now &&
             (!has_active_dev || active_dev.kind != "Mirror");
 
-        if (show_video) {
+        if (stage_visible) {
             if (detach_active && mirror_renderer) {
                 // AirGlass: the video lives in its own window now; leave a
                 // neutral placeholder here so the UI does not look frozen.
@@ -1692,6 +1759,11 @@ void VideoRenderer::run(const std::string& title) {
             SDL_RenderFillRect(renderer, nullptr);
             const int angle = rotation_degrees();
             SDL_Rect dst = fit_inside(display_width(), display_height(), win_w, win_h);
+            if (!draw_video) {
+                // Suspended: black stage, no stale frame, no chrome.
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                SDL_RenderFillRect(renderer, nullptr);
+            }
             // SDL rotates the destination rectangle around its centre. Swap
             // its unrotated extents so the final bounds fit the stage exactly.
             SDL_Rect copy_dst = dst;
@@ -1701,8 +1773,10 @@ void VideoRenderer::run(const std::string& title) {
                 copy_dst.x = dst.x + (dst.w - copy_dst.w) / 2;
                 copy_dst.y = dst.y + (dst.h - copy_dst.h) / 2;
             }
-            SDL_RenderCopyEx(renderer, video_tex, nullptr, &copy_dst,
-                             angle, nullptr, SDL_FLIP_NONE);
+            if (draw_video) {
+                SDL_RenderCopyEx(renderer, video_tex, nullptr, &copy_dst,
+                                 angle, nullptr, SDL_FLIP_NONE);
+            }
             if (show_pause_badge) {
                 draw_pause_badge(dst);
             }
@@ -1766,15 +1840,15 @@ void VideoRenderer::run(const std::string& title) {
             // empty black window sitting on the desktop between sessions, and
             // no button to press before the phone screen shows up.
             static bool mirror_shown = false;
-            if (show_video != mirror_shown) {
-                if (show_video) {
+            if (stage_visible != mirror_shown) {
+                if (stage_visible) {
                     SDL_ShowWindow(mirror_window);
                     SDL_RaiseWindow(mirror_window);   // bring it in front once, not topmost
                 } else {
                     SDL_HideWindow(mirror_window);
                 }
-                mirror_shown = show_video;
-                LOG_INFO << "detach: mirror window " << (show_video ? "shown" : "hidden");
+                mirror_shown = stage_visible;
+                LOG_INFO << "detach: mirror window " << (stage_visible ? "shown" : "hidden");
             }
 
             // Fit the window to the stream once its dimensions are known, and
@@ -1782,7 +1856,7 @@ void VideoRenderer::run(const std::string& title) {
             // 1080p display. Only resizes when the aspect is materially wrong,
             // so a manual resize survives.
             static int fit_w = 0, fit_h = 0;
-            if (show_video && video_tex_w > 0 && video_tex_h > 0) {
+            if (video_tex_w > 0 && video_tex_h > 0) {
                 const bool dims_changed = (fit_w != video_tex_w || fit_h != video_tex_h);
                 const float want = static_cast<float>(video_tex_w) / static_cast<float>(video_tex_h);
                 const float have = (mh > 0) ? static_cast<float>(mw) / static_cast<float>(mh) : 0.0f;
@@ -1810,7 +1884,7 @@ void VideoRenderer::run(const std::string& title) {
 
             SDL_SetRenderDrawColor(mirror_renderer, 0, 0, 0, 255);
             SDL_RenderClear(mirror_renderer);
-            if (show_video && video_tex && mw > 0 && mh > 0) {
+            if (draw_video && video_tex && mw > 0 && mh > 0) {
                 const int angle = rotation_degrees();
                 SDL_Rect dst = fit_inside(display_width(), display_height(), mw, mh);
                 SDL_Rect copy_dst = dst;
@@ -1845,12 +1919,14 @@ void VideoRenderer::run(const std::string& title) {
 
         // AirGlass: when the mirror lives in its own window, say so here instead
         // of leaving a mute dark rectangle where the video used to be.
-        if (detach_active && show_video) {
+        if (detach_active && stage_visible) {
             const ImVec2 stage_pos(static_cast<float>(stage_rect.x),
                                    static_cast<float>(stage_rect.y));
             const ImVec2 stage_size(static_cast<float>(stage_rect.w),
                                     static_cast<float>(stage_rect.h));
-            const char* hint = "Mirror is playing in the \"AirGlass Mirror\" window";
+            const char* hint = suspended
+                ? "Phone screen off — still connected; unlock to resume mirroring"
+                : "Mirror is playing in the \"AirGlass Mirror\" window";
             const ImVec2 text_size = ImGui::CalcTextSize(hint);
             const ImVec2 text_pos(stage_pos.x + (stage_size.x - text_size.x) * 0.5f,
                                   stage_pos.y + (stage_size.y - text_size.y) * 0.5f);
@@ -2066,7 +2142,15 @@ void VideoRenderer::run(const std::string& title) {
                 text_at(small_font,badge_x+26,43,IM_COL32(123,87,30,255),"Check firewall");
             }
             ImGui::SetCursorPos(ImVec2(stage_w-150.f,32));
-            if (ui_draw::text_button("Disconnect",ImVec2(108,34)) && disconnect_handler_) disconnect_handler_();
+            if (ui_draw::text_button("Disconnect",ImVec2(108,34)) && disconnect_handler_) {
+                // AirGlass: an explicit disconnect must also leave the suspended
+                // ("phone asleep") state, otherwise the UI would keep claiming a
+                // connection that the user just ended.
+                mirror_suspended_.store(false, std::memory_order_relaxed);
+                clear_session();
+                clear_active_device();
+                disconnect_handler_();
+            }
         } else {
             text_at(page_font,42,36,ink,ui.page==0 ? "Welcome home." : ui.page==1 ? "Your music on this PC." : "Your screen, live.");
             const float badge_x=stage_w-167.f;

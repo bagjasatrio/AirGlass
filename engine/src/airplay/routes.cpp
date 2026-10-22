@@ -552,8 +552,16 @@ Response handle_teardown(const DeviceContext& ctx, ClientSession& session, const
         // Wipe the idle-mode UI so a new connection doesn't inherit the
         // last track's cover, metadata and progress.
         if (session.renderer) {
-            session.renderer->clear_session();
-            session.renderer->clear_active_device();
+            // AirGlass: a phone locking its screen ends the AirPlay session the
+            // same way a real disconnect does. Keep a mirror session on screen
+            // (black) instead of falling back to the idle UI — unlocking the
+            // phone then resumes mirroring without re-picking the receiver.
+            if (session.renderer->begin_mirror_suspend()) {
+                LOG_INFO << "TEARDOWN: mirror suspended, UI state kept";
+            } else {
+                session.renderer->clear_session();
+                session.renderer->clear_active_device();
+            }
         }
         LOG_INFO << "TEARDOWN: renderer.clear_session() done";
         // Full session end: stop the HLS player so the player thread

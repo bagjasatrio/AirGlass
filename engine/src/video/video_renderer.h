@@ -170,6 +170,13 @@ public:
     };
     void set_active_device(DeviceInfo info);
     void clear_active_device();
+    // AirGlass: iOS ends the mirror session when the phone screen sleeps or is
+    // locked. Returns true when the session that just ended was a Mirror, so
+    // the caller can keep it on screen as "suspended" (black) instead of
+    // dropping back to the idle screen and forcing the user to re-pick the
+    // receiver on unlock.
+    bool begin_mirror_suspend();
+    bool mirror_suspended() const { return mirror_suspended_.load(std::memory_order_relaxed); }
     // Atomically clear only this session, leaving a newer connection intact.
     bool clear_session_if_active(const std::string& session_id);
     bool active_device_snapshot(DeviceInfo& out) const;
@@ -312,6 +319,10 @@ private:
     std::function<void()>      disconnect_handler_;
     std::function<void(ap::airplay::MediaCommand, uint32_t)> audio_control_handler_;
     std::atomic<bool> audio_control_available_{false};
+    // AirGlass: set when a Mirror session ended because the phone slept/locked.
+    // Keeps the mirror window on screen (black) so the UI does not fall back to
+    // the idle screen and the user does not have to re-select the receiver.
+    std::atomic<bool> mirror_suspended_{false};
     std::atomic<bool> audio_command_pending_{false};
     std::atomic<bool> audio_command_failed_{false};
 
