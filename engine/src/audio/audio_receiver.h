@@ -50,7 +50,7 @@ public:
     };
     struct PauseState {
         std::deque<PcmFrame> pcm;
-        std::unique_ptr<SdlAudioOutput> output;
+        std::unique_ptr<WasapiOutput> output;
         int sample_rate = 0;
         int64_t paused_at_ns = 0;
         uint32_t source_lead_frames = 0;

@@ -41,13 +41,13 @@ const char* preset_title(probe::Preset p) {
 const char* preset_hint(probe::Preset p) {
     switch (p) {
         case probe::Preset::P720p60:
-            return "Soft text, smooth motion. Survives 2.4 GHz and weak CPUs.";
+            return "Softer text, smooth motion. Works on 2.4 GHz.";
         case probe::Preset::P1080p30:
-            return "Sharp text, 30 fps. The safe default for reading and demos.";
+            return "Sharp text, 30 fps. Safe default.";
         case probe::Preset::P1080p60:
-            return "Sharp and smooth. Needs GPU decode and a clean 5 GHz link.";
+            return "Sharp and smooth. Needs GPU decode + 5 GHz.";
         case probe::Preset::Auto:
-            return "Picks once from the probe, then only steps down with a reason.";
+            return "Picks once from the probe.";
     }
     return "";
 }
@@ -63,46 +63,71 @@ bool draw_preflight(PreflightState& state, const probe::ProbeResult& probe) {
     ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + vp->WorkSize.x * 0.5f,
                                    vp->WorkPos.y + vp->WorkSize.y * 0.5f),
                             ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(560, 0), ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(ImVec2(520, 0), ImGuiCond_Appearing);
 
     bool chose = false;
+    // No AlwaysAutoResize: the long hint strings used to stretch the modal past
+    // the window edge. A fixed width plus wrapped text keeps it inside.
     if (ImGui::BeginPopupModal("Choose quality", nullptr,
-                               ImGuiWindowFlags_AlwaysAutoResize |
-                                   ImGuiWindowFlags_NoSavedSettings)) {
+                               ImGuiWindowFlags_NoSavedSettings |
+                                   ImGuiWindowFlags_NoResize)) {
         ImGui::TextUnformatted("How sharp should the mirror be?");
+        ImGui::PushTextWrapPos(ImGui::GetContentRegionAvail().x);
         ImGui::TextDisabled("%s", probe::explain(probe, probe::Preset::Auto).c_str());
+        ImGui::PopTextWrapPos();
         ImGui::Separator();
 
         const probe::Preset order[] = {probe::Preset::P1080p30, probe::Preset::P1080p60,
                                        probe::Preset::P720p60, probe::Preset::Auto};
 
-        for (probe::Preset p : order) {
-            const probe::Verdict v = probe::verdict_for(probe, p);
-            ImGui::PushID(static_cast<int>(p));
-            ImGui::BeginGroup();
-            ImGui::TextUnformatted(preset_title(p));
-            ImGui::SameLine(120);
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(verdict_color(v)), "%s",
-                               verdict_label(v));
-            ImGui::SameLine();
-            ImGui::TextDisabled("%s", preset_hint(p));
-            if (p == probe::Preset::Auto) {
-                ImGui::TextDisabled("Auto will choose: %s",
-                                    probe::preset_name(probe::predicted_preset(probe)));
+        // Full-width clickable rows: the row itself is the affordance, so there
+        // is no separate button to mis-align or miss. Three fixed columns keep
+        // the verdict badges in a straight line.
+        if (ImGui::BeginTable("presets", 3,
+                              ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoPadOuterX)) {
+            ImGui::TableSetupColumn("preset", ImGuiTableColumnFlags_WidthFixed, 88.0f);
+            ImGui::TableSetupColumn("verdict", ImGuiTableColumnFlags_WidthFixed, 96.0f);
+            ImGui::TableSetupColumn("detail", ImGuiTableColumnFlags_WidthStretch);
+
+            for (probe::Preset p : order) {
+                const probe::Verdict v = probe::verdict_for(probe, p);
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::PushID(static_cast<int>(p));
+                if (ImGui::Selectable(preset_title(p), false,
+                                      ImGuiSelectableFlags_SpanAllColumns |
+                                          ImGuiSelectableFlags_AllowOverlap,
+                                      ImVec2(0, 28))) {
+                    state.chosen = p;
+                    state.open = false;
+                    chose = true;
+                }
+
+                ImGui::TableSetColumnIndex(1);
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(verdict_color(v)), "%s",
+                                   verdict_label(v));
+
+                ImGui::TableSetColumnIndex(2);
+                ImGui::AlignTextToFramePadding();
+                ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x);
+                ImGui::TextDisabled("%s", preset_hint(p));
+                if (p == probe::Preset::Auto) {
+                    ImGui::TextDisabled("Auto will choose: %s",
+                                        probe::preset_name(probe::predicted_preset(probe)));
+                }
+                ImGui::PopTextWrapPos();
+                ImGui::PopID();
             }
-            ImGui::EndGroup();
-            ImGui::SameLine(ImGui::GetContentRegionAvail().x - 40);
-            if (ImGui::Button("Use", ImVec2(70, 0))) {
-                state.chosen = p;
-                state.open = false;
-                chose = true;
-            }
-            ImGui::Separator();
-            ImGui::PopID();
+            ImGui::EndTable();
         }
 
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::PushTextWrapPos(ImGui::GetContentRegionAvail().x);
         ImGui::TextDisabled(
             "Preset is locked for the session. Stop and start again to change it.");
+        ImGui::PopTextWrapPos();
         if (chose) ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
     }

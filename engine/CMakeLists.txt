@@ -24,6 +24,17 @@ endif()
 # Try three lookup paths in order (vcpkg / Linux pkg-config / raw find_*).
 set(LIBPLIST_TARGET "")
 
+# Glasscast: vcpkg puts both lib/ and debug/lib/ on CMAKE_PREFIX_PATH, and the
+# raw finder below happily picked the DEBUG import library for a Release build.
+# Pin the release copy explicitly when we know where vcpkg lives.
+if(WIN32)
+    set(_vcpkg_inst "${CMAKE_CURRENT_LIST_DIR}/../vendor/vcpkg/installed/x64-windows")
+    if(EXISTS "${_vcpkg_inst}/lib/plist-2.0.lib")
+        set(LIBPLIST_LIBRARY "${_vcpkg_inst}/lib/plist-2.0.lib" CACHE FILEPATH "" FORCE)
+        set(LIBPLIST_INCLUDE_DIR "${_vcpkg_inst}/include" CACHE PATH "" FORCE)
+    endif()
+endif()
+
 find_package(PkgConfig QUIET)
 if(PkgConfig_FOUND)
     pkg_check_modules(LIBPLIST IMPORTED_TARGET libplist-2.0 QUIET)
@@ -436,8 +447,12 @@ if(WIN32)
     # dwmapi: DwmSetWindowAttribute for the Win11 Mica backdrop on the
     # VideoRenderer window.
     target_link_libraries(airplay-windows PRIVATE
-        ws2_32 iphlpapi dnsapi dwmapi d3d11
-        setupapi shell32 ole32 oleaut32)   # USB, Lockdown lookup and firewall COM API
+        ws2_32 iphlpapi dnsapi dwmapi d3d11 wlanapi
+        setupapi shell32 ole32 oleaut32)   # USB, Lockdown lookup, firewall + WLAN COM API
+
+    set_target_properties(airplay-windows PROPERTIES
+        WIN32_EXECUTABLE TRUE
+        OUTPUT_NAME glasscast)
 
     # Released as a GUI app so no empty console window pops up when
     # launched from File Explorer. main() stays the entry point — the

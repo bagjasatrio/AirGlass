@@ -43,7 +43,7 @@ bool public_profile_only(bool& any_connected) {
         return false;
     }
     VARIANT_BOOL online = VARIANT_FALSE;
-    manager->IsConnectedToInternet(&online);
+    manager->get_IsConnectedToInternet(&online);
 
     ComPtr<IEnumNetworks> networks;
     if (FAILED(manager->GetNetworks(NLM_ENUM_NETWORK_CONNECTED, &networks)) || !networks) {

@@ -47,7 +47,7 @@ std::string settings_path() {
     std::string path = dir;
     path += "\\glasscast";
     CreateDirectoryA(path.c_str(), nullptr);
-    path += "\\settings.ini";
+    path += "\\presets.ini";   // separate file: engine owns settings.ini
     return path;
 }
 

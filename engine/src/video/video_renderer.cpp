@@ -1123,6 +1123,18 @@ void VideoRenderer::run(const std::string& title) {
 
     ap::platform::FirewallMonitor firewall_monitor;
     while (running_.load()) {
+        // Glasscast: idle throttle. Upstream spins this poll loop at whatever
+        // the renderer allows even with no session attached, which measured
+        // 50-150% of one core on a laptop doing nothing. Cap idle redraw at
+        // ~30 fps; when frames are arriving the loop is paced by the stream.
+        if (!has_frame_ && !has_avframe_) {
+            static auto last_idle = std::chrono::steady_clock::now();
+            const auto now_idle = std::chrono::steady_clock::now();
+            const auto elapsed_ms =
+                std::chrono::duration_cast<std::chrono::milliseconds>(now_idle - last_idle).count();
+            if (elapsed_ms < 33) SDL_Delay(static_cast<Uint32>(33 - elapsed_ms));
+            last_idle = std::chrono::steady_clock::now();
+        }
         if (show_requested_.exchange(false)) {
             SDL_ShowWindow(window);
             if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)
@@ -1640,8 +1652,25 @@ void VideoRenderer::run(const std::string& title) {
                 g_probe_ready = true;
                 LOG_INFO << "Pre-flight probe: "
                          << ap::probe::explain(g_probe, ap::probe::Preset::Auto);
+                // Kiosk/CI escape hatch: answer the chooser without a mouse.
+                // Same code path as a click, so the applied/logged behaviour is
+                // identical to what a user gets.
+                const char* preset_env = std::getenv("GLASSCAST_PREFLIGHT_ANSWER");
+                if (preset_env) {
+                    ap::probe::Preset from_env{};
+                    if (ap::preset::parse(preset_env, from_env)) {
+                        g_preflight.chosen = from_env;
+                        g_preflight.open = false;
+                    }
+                }
             }
-            if (ap::ui::draw_preflight(g_preflight, g_probe)) {
+            bool applied = false;
+            if (!g_preflight.open) {
+                applied = true;  // answered via GLASSCAST_PREFLIGHT_ANSWER
+            } else if (ap::ui::draw_preflight(g_preflight, g_probe)) {
+                applied = true;
+            }
+            if (applied) {
                 const ap::probe::Preset effective =
                     g_preflight.chosen == ap::probe::Preset::Auto
                         ? ap::probe::predicted_preset(g_probe)
@@ -1654,9 +1683,11 @@ void VideoRenderer::run(const std::string& title) {
                 live_settings_->preflight_skip.store(true);
                 ap::preset::save(g_preflight.chosen);
                 LOG_INFO << "Pre-flight preset chosen: "
-                         << ap::preset::to_string(g_preflight.chosen) << " (effective "
-                         << ap::preset::to_string(effective) << ", " << spec.short_side << 'p'
-                         << spec.fps << ')';
+                         << ap::preset::to_string(g_preflight.chosen)
+                         << (g_preflight.chosen == effective ? "" : " (effective ")
+                         << (g_preflight.chosen == effective ? "" : ap::preset::to_string(effective))
+                         << (g_preflight.chosen == effective ? "" : ")")
+                         << " canvas=" << spec.short_side << 'p' << spec.fps;
             }
         }
 
