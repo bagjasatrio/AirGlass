@@ -215,7 +215,7 @@ int main(int argc, char** argv) {
     int  mirror_w = saved.mirror_width;
     int  mirror_h = saved.mirror_height;
     int  preset_fps = 0;                                   // AirGlass: 0 = upstream default
-    bool detach_requested = false;                         // AirGlass: separate mirror window
+    bool detach_requested = true;                          // AirGlass: separate mirror window (default)
     std::optional<ap::probe::Preset> preset_applied;       // AirGlass
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -243,6 +243,10 @@ int main(int argc, char** argv) {
             LOG_INFO << "OBS mode: mirror in a separate borderless window 'AirGlass Mirror'";
         } else if (arg == "--detach") {
             detach_requested = true;
+        } else if (arg == "--no-detach" || arg == "--single-window") {
+            // Keeps the mirror inside the main window (old behaviour).
+            detach_requested = false;
+            LOG_INFO << "single-window mode: mirror rendered inside the main window";
         } else if (arg == "--mirror-hwaccel") {
             mirror_hwaccel = true;
         } else if ((arg == "--mirror-res" || arg == "-r") && i + 1 < argc) {

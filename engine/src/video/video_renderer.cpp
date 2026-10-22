@@ -850,7 +850,10 @@ void VideoRenderer::run(const std::string& title) {
         // Deliberately NOT topmost: on a single screen a topmost borderless
         // window covers the UI you just opened it from, and OBS Window Capture
         // does not need it.
-        Uint32 flags = SDL_WINDOW_BORDERLESS | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
+        // Created hidden: the window must exist before the decoder binds its
+        // D3D11 device, but it should only appear once there is a mirror to show.
+        Uint32 flags = SDL_WINDOW_BORDERLESS | SDL_WINDOW_RESIZABLE |
+                       SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_HIDDEN;
         mirror_window = SDL_CreateWindow("AirGlass Mirror", pos_x, pos_y, w, h, flags);
         if (!mirror_window) {
             LOG_ERROR << "detach: mirror window create failed: " << SDL_GetError();
@@ -1759,6 +1762,21 @@ void VideoRenderer::run(const std::string& title) {
             int mw = 0, mh = 0;
             SDL_GetWindowSize(mirror_window, &mw, &mh);
 
+            // Appear the moment a mirror starts, disappear when it ends: no
+            // empty black window sitting on the desktop between sessions, and
+            // no button to press before the phone screen shows up.
+            static bool mirror_shown = false;
+            if (show_video != mirror_shown) {
+                if (show_video) {
+                    SDL_ShowWindow(mirror_window);
+                    SDL_RaiseWindow(mirror_window);   // bring it in front once, not topmost
+                } else {
+                    SDL_HideWindow(mirror_window);
+                }
+                mirror_shown = show_video;
+                LOG_INFO << "detach: mirror window " << (show_video ? "shown" : "hidden");
+            }
+
             // Fit the window to the stream once its dimensions are known, and
             // keep it on screen: a 1080x1920 borderless window would hang off a
             // 1080p display. Only resizes when the aspect is materially wrong,
@@ -1825,7 +1843,20 @@ void VideoRenderer::run(const std::string& title) {
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 
-        // --- AirGlass: pre-flight preset chooser ---------------------------
+        // AirGlass: when the mirror lives in its own window, say so here instead
+        // of leaving a mute dark rectangle where the video used to be.
+        if (detach_active && show_video) {
+            const ImVec2 stage_pos(static_cast<float>(stage_rect.x),
+                                   static_cast<float>(stage_rect.y));
+            const ImVec2 stage_size(static_cast<float>(stage_rect.w),
+                                    static_cast<float>(stage_rect.h));
+            const char* hint = "Mirror is playing in the \"AirGlass Mirror\" window";
+            const ImVec2 text_size = ImGui::CalcTextSize(hint);
+            const ImVec2 text_pos(stage_pos.x + (stage_size.x - text_size.x) * 0.5f,
+                                  stage_pos.y + (stage_size.y - text_size.y) * 0.5f);
+            ImGui::GetBackgroundDrawList()->AddText(text_pos, IM_COL32(140, 148, 156, 255), hint);
+        }
+
         // Exactly one appearance per launch, before any mirror session. Once a
         // preset is applied it is locked: this code never runs again, so the
         // choice can only change by restarting the receiver.

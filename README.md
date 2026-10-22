@@ -45,10 +45,12 @@ Presets are locked for the session: changing one means Stop, then Start. Mid-ses
 
 ## OBS: mirror in its own window
 
-For streaming or recording with OBS, run the mirror in a separate borderless window so the capture source contains **only the phone screen** — no sidebar, no stats, no background:
+The mirror renders into its **own borderless window by default**: start a session and a second window titled `AirGlass Mirror` appears with nothing but the phone screen — no sidebar, no stats, no desktop behind it. Nothing to click first; the window shows up when mirroring starts and hides when it ends.
 
 ```
-airglass.exe --obs
+airglass.exe                 # two windows: UI + AirGlass Mirror (default)
+airglass.exe --no-detach     # old behaviour: mirror inside the main window
+airglass.exe --obs           # explicit form of the default
 ```
 
 That opens two windows:

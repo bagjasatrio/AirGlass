@@ -71,9 +71,10 @@ struct LiveSettings {
     // means the pre-flight chooser must not appear. The chooser sets this
     // itself once the user picks, so it shows exactly once per launch.
     std::atomic<bool> preflight_skip{false};
-    // AirGlass: render the mirror into its own borderless top-level window so
-    // OBS Window Capture gets a source containing nothing but the phone screen.
-    std::atomic<bool> detach_mirror{false};
+    // AirGlass: the mirror renders into its own borderless top-level window BY
+    // DEFAULT, so a capturable "phone only" window exists without the user
+    // pressing anything. `--no-detach` (or the D key) puts it back in-window.
+    std::atomic<bool> detach_mirror{true};
     // Display only: -1 follows the orientation encoded by iOS; 0..3 adds
     // clockwise quarter turns to the received image. Recording is unchanged.
     std::atomic<int> video_rotation{-1};
