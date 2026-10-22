@@ -1,4 +1,4 @@
-// Glasscast — pre-flight preset chooser.
+// AirGlass — pre-flight preset chooser.
 //
 // Shown once, at launch, before any mirror session exists. Four cards, each
 // carrying the verdict the probe computed for *this* machine, so the user picks

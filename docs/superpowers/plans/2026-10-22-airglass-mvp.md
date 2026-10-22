@@ -1,4 +1,4 @@
-# Glasscast MVP Implementation Plan
+# AirGlass MVP Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** C++20, CMake ≥3.21, MSVC (VS 2026), FFmpeg prebuilt shared (BtbN gpl-shared), vcpkg (openssl, libplist, sdl2, sdl2-ttf), D3D11 + DXGI 1.4 (`FRAME_LATENCY_WAITABLE_OBJECT`), WASAPI, wlanapi, ImGui, GitHub Actions.
 
-**Spec:** `docs/design/2026-10-22-glasscast-design.md`
+**Spec:** `docs/design/2026-10-22-airglass-design.md`
 
 ## Global Constraints
 
@@ -37,7 +37,7 @@
 - Test: `tests/smoke/test_toolchain.py`
 
 **Interfaces:**
-- Produces: target CMake `glasscast` (exe), variabel cache `GLASSCAST_FFMPEG_DIR`, `GLASSCAST_VCPKG_TRISTATE`.
+- Produces: target CMake `airglass` (exe), variabel cache `AIRGLASS_FFMPEG_DIR`, `AIRGLASS_VCPKG_TRISTATE`.
 
 - [ ] **Step 1: Tulis test smoke toolchain** — assert CMake ≥3.21, MSVC toolset terdeteksi, file `vendor/ffmpeg/include/libavcodec/avcodec.h` ada.
 - [ ] **Step 2: Jalankan, pastikan gagal** — `python tests/smoke/test_toolchain.py` → FAIL karena `vendor/ffmpeg` belum ada.
@@ -52,7 +52,7 @@
 - Test: `tests/smoke/test_engine_handshake.py`
 
 **Interfaces:**
-- Produces: `glasscast.exe --headless --port 7000` yang mengiklankan `_airplay._tcp` dan menjawab `GET /info` dengan bplist.
+- Produces: `airglass.exe --headless --port 7000` yang mengiklankan `_airplay._tcp` dan menjawab `GET /info` dengan bplist.
 
 - [ ] **Step 1: Tulis test** — start exe, tunggu log `mDNS registered`, kirim `GET /info` via HTTP, assert respons diawali `bplist00` dan memuat key `features`.
 - [ ] **Step 2: Jalankan, pastikan gagal** (exe belum ada).
@@ -72,7 +72,7 @@
 - [ ] **Step 1: Tulis test** — `verdict(Preset::P1080p60)` pada `ProbeResult{hw_decode_d3d11va=false, cores=2, wifi_band_mhz=2437}` → `Verdict::Risky`; `wifi_band_mhz=5180 && hw_decode_d3d11va=true` → `Recommended`.
 - [ ] **Step 2: Jalankan, gagal**.
 - [ ] **Step 3: Implementasi** — D3D11 device creation + `ID3D11VideoDevice` probe, `WlanQueryInterface(wlan_intf_opcode_current_connection)` untuk band/link rate.
-- [ ] **Step 4: Test pass** + jalankan `glasscast --probe` di mesin ini, cetak hasil nyata.
+- [ ] **Step 4: Test pass** + jalankan `airglass --probe` di mesin ini, cetak hasil nyata.
 - [ ] **Step 5: Commit**.
 
 ### Task 4: Model preset + persistensi
@@ -86,7 +86,7 @@
 
 - [ ] **Step 1: Tulis test** — `spec_of(P1080p30) == {1080, 30}`; simpan `P720p60` lalu `load_last()` mengembalikannya; nilai rusak di file → fallback `P1080p30` dan tandai `used_fallback=true`.
 - [ ] **Step 2: Jalankan, gagal**.
-- [ ] **Step 3: Implementasi** — JSON kecil di `%APPDATA%\glasscast\settings.json`.
+- [ ] **Step 3: Implementasi** — JSON kecil di `%APPDATA%\airglass\settings.json`.
 - [ ] **Step 4: Test pass**.
 - [ ] **Step 5: Commit**.
 
@@ -179,7 +179,7 @@
 - [ ] **Step 1: Tulis test** — profil Public → `PublicProfile` dengan aksi "ubah ke Private"; adapter VPN aktif + mDNS gagal → `VpnActive` diprioritaskan di atas `MdnsBlocked`.
 - [ ] **Step 2: Jalankan, gagal**.
 - [ ] **Step 3: Implementasi** cek `NetConnectionProfile`, enumerasi adapter, listener 5353 percobaan, plus tombol "buat rule firewall" via `INetFwPolicy2` (elevation sekali).
-- [ ] **Step 4: Test pass** + verifikasi rule benar-benar dibuat di mesin ini (`netsh advfirewall firewall show rule name=Glasscast`).
+- [ ] **Step 4: Test pass** + verifikasi rule benar-benar dibuat di mesin ini (`netsh advfirewall firewall show rule name=AirGlass`).
 - [ ] **Step 5: Commit**.
 
 ### Task 11: QA audit menyeluruh

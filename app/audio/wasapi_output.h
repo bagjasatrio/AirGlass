@@ -1,4 +1,4 @@
-// Glasscast — WASAPI audio sink.
+// AirGlass — WASAPI audio sink.
 //
 // Replaces upstream's SDL_QueueAudio sink. Three things the SDL path cannot do,
 // and which are exactly the "audio sometimes disappears / arrives late" bugs:

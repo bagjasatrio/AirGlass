@@ -30,7 +30,7 @@ struct UiPreferences {
 };
 
 struct PersistentSettings {
-    std::string receiver_name = "Glasscast";
+    std::string receiver_name = "AirGlass";
     int  mirror_width   = 0;
     int  mirror_height  = 0;
     bool hevc_enabled   = true;

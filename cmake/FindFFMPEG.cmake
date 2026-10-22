@@ -1,7 +1,7 @@
-# FindFFMPEG — Glasscast variant.
+# FindFFMPEG — AirGlass variant.
 #
 # Upstream AirPlay-Windows expects vcpkg's FFMPEG module (which builds FFmpeg
-# from source, 20-45 min on Windows). Glasscast links a prebuilt shared FFmpeg
+# from source, 20-45 min on Windows). AirGlass links a prebuilt shared FFmpeg
 # instead (BtbN win64-gpl-shared): same ABI, hardware decoders included
 # (d3d11va, dxva2, cuda/nvdec, qsv), and the build stays under a minute.
 #
@@ -9,9 +9,9 @@
 #   FFMPEG_FOUND, FFMPEG_LIBRARIES (target names), FFMPEG_INCLUDE_DIRS
 #
 # Usage:
-#   cmake -DGLASSCAST_FFMPEG_DIR=C:/project/glasscast/vendor/ffmpeg ...
+#   cmake -DAIRGLASS_FFMPEG_DIR=C:/project/airglass/vendor/ffmpeg ...
 
-set(_ffmpeg_root "${GLASSCAST_FFMPEG_DIR}")
+set(_ffmpeg_root "${AIRGLASS_FFMPEG_DIR}")
 if(NOT _ffmpeg_root)
     set(_ffmpeg_root "${CMAKE_CURRENT_LIST_DIR}/../vendor/ffmpeg")
 endif()

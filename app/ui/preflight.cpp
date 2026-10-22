@@ -1,4 +1,4 @@
-// Glasscast — pre-flight preset chooser (ImGui implementation).
+// AirGlass — pre-flight preset chooser (ImGui implementation).
 // GPL-3.0. No upstream UxPlay code in this file.
 
 #include "ui/preflight.h"

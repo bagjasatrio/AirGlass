@@ -53,13 +53,13 @@ jobs:
       - name: Probe smoke test
         shell: bash
         run: |
-          ./build/Release/glasscast.exe --probe | tee probe.txt
+          ./build/Release/airglass.exe --probe | tee probe.txt
           grep -q "preset 1080p30" probe.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: glasscast-windows-x64
+          name: airglass-windows-x64
           path: |
-            build/Release/glasscast.exe
+            build/Release/airglass.exe
             build/Release/*.dll
             probe.txt

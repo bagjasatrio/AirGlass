@@ -1,4 +1,4 @@
-// Glasscast — quality presets and their persistence.
+// AirGlass — quality presets and their persistence.
 // GPL-3.0. No upstream UxPlay code in this file.
 
 #include "preset.h"
@@ -45,7 +45,7 @@ std::string settings_path() {
     char dir[MAX_PATH]{};
     if (FAILED(SHGetFolderPathA(nullptr, CSIDL_APPDATA, nullptr, 0, dir))) return {};
     std::string path = dir;
-    path += "\\glasscast";
+    path += "\\airglass";
     CreateDirectoryA(path.c_str(), nullptr);
     path += "\\presets.ini";   // separate file: engine owns settings.ini
     return path;

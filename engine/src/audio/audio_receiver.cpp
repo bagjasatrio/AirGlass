@@ -97,7 +97,7 @@ bool AudioReceiver::start(Config cfg, PauseState state) {
         decoder_.reset();
     }
 
-    // WASAPI event-driven sink (Glasscast). Goes live only if the OS gave us a
+    // WASAPI event-driven sink (AirGlass). Goes live only if the OS gave us a
     // device; a headless VM falls back to silent decode-only mode.
     if (decoder_ && !output_) {
         output_ = std::make_unique<WasapiOutput>();

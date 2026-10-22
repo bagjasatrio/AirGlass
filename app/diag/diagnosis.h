@@ -1,4 +1,4 @@
-// Glasscast — network self-diagnosis for the "iPhone can't see my PC" case.
+// AirGlass — network self-diagnosis for the "iPhone can't see my PC" case.
 //
 // The paid apps answer this with a FAQ link. We answer it with the actual
 // cause: public firewall profile, VPN adapter stealing the mDNS multicast,

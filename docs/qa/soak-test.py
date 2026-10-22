@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Soak test: watch Glasscast's process while it runs.
+"""Soak test: watch AirGlass's process while it runs.
 
 Samples RSS, CPU% and thread count every interval and fails if the process
 crosses the design budget (RSS > 250 MB, sustained CPU above the software-decode
@@ -13,7 +13,7 @@ A/V skew and drop rate cannot be sampled from outside the process yet; the stats
 overlay reports them and the audit document records them by hand.
 
 Usage:
-    python docs/qa/soak-test.py --exe build/Release/glasscast.exe --minutes 30
+    python docs/qa/soak-test.py --exe build/Release/airglass.exe --minutes 30
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ CPU_BUDGET_PCT = 60.0
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--exe", default="build/Release/glasscast.exe")
+    ap.add_argument("--exe", default="build/Release/airglass.exe")
     ap.add_argument("--minutes", type=float, default=30)
     ap.add_argument("--interval", type=float, default=10)
     ap.add_argument("--preset", default="1080p30")

@@ -7,7 +7,7 @@
 #include "airplay/receiver_name.h"
 #include "log.h"
 
-// Glasscast additions
+// AirGlass additions
 #include "preset/preset.h"
 #include "probe.h"
 #include "ui/preflight.h"
@@ -1123,7 +1123,7 @@ void VideoRenderer::run(const std::string& title) {
 
     ap::platform::FirewallMonitor firewall_monitor;
     while (running_.load()) {
-        // Glasscast: idle throttle. Upstream spins this poll loop at whatever
+        // AirGlass: idle throttle. Upstream spins this poll loop at whatever
         // the renderer allows even with no session attached, which measured
         // 50-150% of one core on a laptop doing nothing. Cap idle redraw at
         // ~30 fps; when frames are arriving the loop is paced by the stream.
@@ -1639,7 +1639,7 @@ void VideoRenderer::run(const std::string& title) {
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 
-        // --- Glasscast: pre-flight preset chooser ---------------------------
+        // --- AirGlass: pre-flight preset chooser ---------------------------
         // Exactly one appearance per launch, before any mirror session. Once a
         // preset is applied it is locked: this code never runs again, so the
         // choice can only change by restarting the receiver.
@@ -1655,7 +1655,7 @@ void VideoRenderer::run(const std::string& title) {
                 // Kiosk/CI escape hatch: answer the chooser without a mouse.
                 // Same code path as a click, so the applied/logged behaviour is
                 // identical to what a user gets.
-                const char* preset_env = std::getenv("GLASSCAST_PREFLIGHT_ANSWER");
+                const char* preset_env = std::getenv("AIRGLASS_PREFLIGHT_ANSWER");
                 if (preset_env) {
                     ap::probe::Preset from_env{};
                     if (ap::preset::parse(preset_env, from_env)) {
@@ -1666,7 +1666,7 @@ void VideoRenderer::run(const std::string& title) {
             }
             bool applied = false;
             if (!g_preflight.open) {
-                applied = true;  // answered via GLASSCAST_PREFLIGHT_ANSWER
+                applied = true;  // answered via AIRGLASS_PREFLIGHT_ANSWER
             } else if (ap::ui::draw_preflight(g_preflight, g_probe)) {
                 applied = true;
             }

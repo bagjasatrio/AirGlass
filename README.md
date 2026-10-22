@@ -1,17 +1,17 @@
-# Glasscast
+# AirGlass
 
 AirPlay receiver for Windows. Free, open source, no session limit, no watermark, no account — and it tells you the truth about what your machine can actually do.
 
 Built because the free tiers of existing receivers cut you off after 15 minutes, quietly drop to 720p, and lose the audio when you plug in headphones.
 
-> **Status: v0.1 work in progress.** The protocol engine is a fork of [`moieric11/AirPlay-Windows`](https://github.com/moieric11/AirPlay-Windows) (itself a UxPlay port). Glasscast adds explicit quality presets, a capability probe that runs before you mirror, a WASAPI audio path that survives device changes, and network self-diagnosis.
+> **Status: v0.1 work in progress.** The protocol engine is a fork of [`moieric11/AirPlay-Windows`](https://github.com/moieric11/AirPlay-Windows) (itself a UxPlay port). AirGlass adds explicit quality presets, a capability probe that runs before you mirror, a WASAPI audio path that survives device changes, and network self-diagnosis.
 
 ## What it does
 
 - **Mirror + audio** from iPhone/iPad to a Windows PC over the same Wi-Fi. No Bonjour install, no firewall fiddling, no Apple runtime.
 - **Presets chosen up front** — `720p60`, `1080p30`, `1080p60`, or `auto` — with a verdict per preset computed from *your* hardware and Wi-Fi band before the session starts. Nothing is downgraded silently mid-session.
 - **Audio that doesn't disappear** — WASAPI event-driven sink, default-device-change handling, resampling to the endpoint rate, and a backlog guard that drops stale audio rather than letting it drift late.
-- **Diagnosis instead of a FAQ link** — if the iPhone can't see the PC, Glasscast names the cause: Public firewall profile, VPN adapter, mDNS port taken, or suspected AP isolation.
+- **Diagnosis instead of a FAQ link** — if the iPhone can't see the PC, AirGlass names the cause: Public firewall profile, VPN adapter, mDNS port taken, or suspected AP isolation.
 
 ## What it does not do
 
@@ -23,11 +23,11 @@ Built because the free tiers of existing receivers cut you off after 15 minutes,
 ## Usage
 
 ```text
-glasscast.exe                     # start receiver (uses your last preset)
-glasscast.exe --preset 1080p30    # pick a preset explicitly (saved for next time)
-glasscast.exe --preset auto       # let the probe choose once, at start
-glasscast.exe --probe             # print capability report and exit (no server)
-glasscast.exe --log               # verbose logs to the console
+airglass.exe                     # start receiver (uses your last preset)
+airglass.exe --preset 1080p30    # pick a preset explicitly (saved for next time)
+airglass.exe --preset auto       # let the probe choose once, at start
+airglass.exe --probe             # print capability report and exit (no server)
+airglass.exe --log               # verbose logs to the console
 ```
 
 On the iPhone: Control Center → Screen Mirroring → your PC name.

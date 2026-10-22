@@ -1,4 +1,4 @@
-// Glasscast — machine + WLAN probe implementation.
+// AirGlass — machine + WLAN probe implementation.
 // GPL-3.0. No upstream UxPlay code in this file.
 
 #include "probe.h"

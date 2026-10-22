@@ -21,7 +21,7 @@
 #include "usb/usb_supervisor.h"
 #include "video/video_renderer.h"
 
-// Glasscast additions (not upstream): capability probe, presets, diagnosis.
+// AirGlass additions (not upstream): capability probe, presets, diagnosis.
 #include "diag/diagnosis.h"
 #include "preset/preset.h"
 #include "probe.h"
@@ -41,7 +41,7 @@ namespace {
 
 std::atomic<bool> g_stop{false};
 
-// Glasscast: --probe must print to stdout even though the release build is
+// AirGlass: --probe must print to stdout even though the release build is
 // /SUBSYSTEM:WINDOWS. Same attach dance the --log path uses.
 void ensure_console() {
 #if defined(_WIN32)
@@ -55,7 +55,7 @@ void ensure_console() {
 #endif
 }
 
-// Glasscast: `--probe` prints the machine/network verdict table and exits.
+// AirGlass: `--probe` prints the machine/network verdict table and exits.
 // Machine-readable enough to diff between runs, human enough to paste in a bug
 // report. No AirPlay server is started, no firewall rule is touched.
 int run_probe_cli() {
@@ -112,7 +112,7 @@ void signal_handler(int) { g_stop = true; }
 // an opt-in experimental path.
 ap::airplay::DeviceContext build_device_context(bool hls_playback) {
     ap::airplay::DeviceContext ctx;
-    ctx.name     = "AirPlay-Windows";
+    ctx.name     = "AirGlass";
     ctx.deviceid = ap::net::primary_mac();
     ctx.model    = "AppleTV3,2";
     ctx.pi       = "b08f5a79-db29-4384-b456-a4784d9e6055";
@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
 #if defined(_WIN32)
     for (int i=1; i<argc; ++i)
         if (std::string(argv[i])=="--configure-firewall") return ap::platform::configure_firewall();
-    // Glasscast: read-only capability report; runs before the single-instance
+    // AirGlass: read-only capability report; runs before the single-instance
     // guard so it works while a receiver is already up.
     for (int i = 1; i < argc; ++i)
         if (std::string(argv[i]) == "--probe") return run_probe_cli();
@@ -214,12 +214,12 @@ int main(int argc, char** argv) {
     bool mirror_hwaccel = saved.mirror_hwaccel;
     int  mirror_w = saved.mirror_width;
     int  mirror_h = saved.mirror_height;
-    int  preset_fps = 0;                                   // Glasscast: 0 = upstream default
-    std::optional<ap::probe::Preset> preset_applied;       // Glasscast
+    int  preset_fps = 0;                                   // AirGlass: 0 = upstream default
+    std::optional<ap::probe::Preset> preset_applied;       // AirGlass
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--preset" && i + 1 < argc) {
-            // Glasscast: the only way a preset enters the pipeline. Saved so the
+            // AirGlass: the only way a preset enters the pipeline. Saved so the
             // next launch can default to the same choice (never to "auto").
             const std::string val = argv[++i];
             ap::probe::Preset chosen{};
@@ -285,7 +285,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    // Glasscast: resolve the preset into the three values the pipeline actually
+    // AirGlass: resolve the preset into the three values the pipeline actually
     // consumes (advertised canvas, fps cap, hw decode). "auto" is resolved here,
     // once, and logged — never re-decided silently mid-session.
     if (preset_applied) {

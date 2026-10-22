@@ -1,9 +1,9 @@
-# Glasscast — Design
+# AirGlass — Design
 
 **Tanggal:** 2026-10-22
 **Status:** disetujui pemilik proyek (chat), siap implementasi
 **Lisensi:** GPL-3.0 (mewarisi rantai UxPlay)
-**Repo:** github.com/<user>/glasscast (belum dipublikasikan)
+**Repo:** github.com/<user>/airglass (belum dipublikasikan)
 
 ## 1. Intent
 

@@ -1,6 +1,6 @@
-# Third-Party Notices — Glasscast
+# Third-Party Notices — AirGlass
 
-Glasscast is GPL-3.0. It is a derivative work of two GPL-3 projects and links
+AirGlass is GPL-3.0. It is a derivative work of two GPL-3 projects and links
 several third-party libraries. Nothing here is relicensed; the notices below
 exist so the provenance is auditable.
 
@@ -11,13 +11,13 @@ exist so the provenance is auditable.
   port/fork of UxPlay.
 - **Upstream chain:** UxPlay (https://github.com/FDH2/UxPlay, GPL-3.0) ← RPiPlay
   (unmaintained since 2021) ← the OpenAirPlay protocol notes.
-- **What Glasscast changed** (see `git log` for the diffs):
+- **What AirGlass changed** (see `git log` for the diffs):
   - `CMakeLists.txt`: links prebuilt FFmpeg via `cmake/FindFFMPEG.cmake`,
-    project renamed, Glasscast sources added to the target.
+    project renamed, AirGlass sources added to the target.
   - `src/main.cpp`: `--preset` and `--probe` handling; preset resolution into
     advertised canvas / fps cap / hwaccel.
   - `src/audio/audio_receiver.{h,cpp}`: audio sink swapped from SDL queue to the
-    Glasscast WASAPI sink.
+    AirGlass WASAPI sink.
   - `src/audio/audio_output.{h,cpp}`: superseded, excluded from the build.
 - **Everything else in `engine/` is upstream code, GPL-3.0, unmodified.**
 
@@ -34,17 +34,17 @@ exist so the provenance is auditable.
   `POST /fp-setup`.
 - **Status:** 568 bytes of Apple-produced data, redistributed on the long-standing
   UxPlay / RPiPlay / shairport-sync precedent. **Apple retains ownership.**
-  - Glasscast does not sell, license, or bundle these bytes in any paid product.
+  - AirGlass does not sell, license, or bundle these bytes in any paid product.
   - If Apple asks for removal, remove them: build with
     `engine/third_party/fairplay_blobs_stub.cpp` and the handshake fails at
     `/fp-setup` by design.
-  - Legal risk is inherited from upstream and is not increased by Glasscast,
+  - Legal risk is inherited from upstream and is not increased by AirGlass,
   but it is real: this is the one part of the project that is not
   straightforwardly distributable.
 
 ## 2. Linked libraries
 
-| Component | Version source | License | How Glasscast uses it |
+| Component | Version source | License | How AirGlass uses it |
 |---|---|---|---|
 | FFmpeg (prebuilt, BtbN `win64-gpl-shared`) | fetched at build time | LGPL-2.1+ / GPL-2.0+ (gpl build) | decode H.264/HEVC, AAC-ELD, ALAC; libswresample for audio rate conversion |
 | OpenSSL | vcpkg | Apache-2.0 | X25519/Ed25519 key agreement, AES-CTR/CBC, SHA |
@@ -59,6 +59,6 @@ so the GPL build keeps the licensing story consistent with the project license.
 
 ## 3. Trademarks
 
-"AirPlay", "iPhone", "iPad", "Apple TV" are trademarks of Apple Inc. Glasscast
+"AirPlay", "iPhone", "iPad", "Apple TV" are trademarks of Apple Inc. AirGlass
 is not affiliated with, endorsed by, or certified by Apple. The terms appear
 only to describe compatibility.

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Smoke test: `glasscast --probe` must answer before any server starts.
+"""Smoke test: `airglass --probe` must answer before any server starts.
 
 Runs the release binary, parses the key/value report, and asserts the contract
 the pre-flight UI depends on. No iPhone, no network, no admin rights needed.
 
-Usage:  python tests/smoke/test_probe.py [path-to-glasscast.exe]
+Usage:  python tests/smoke/test_probe.py [path-to-airglass.exe]
 Exit 0 = pass, 1 = fail with the offending line printed.
 """
 
@@ -15,7 +15,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-DEFAULT_EXE = Path("build/Release/glasscast.exe")
+DEFAULT_EXE = Path("build/Release/airglass.exe")
 REQUIRED_KEYS = ("gpu", "hw_decode", "cpu_cores", "ram_mb", "wifi", "diagnosis")
 EXPECTED_PRESETS = {"720p60", "1080p30", "1080p60", "auto"}
 VALID_VERDICTS = {"recommended", "possible", "risky"}

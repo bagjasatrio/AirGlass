@@ -1,4 +1,4 @@
-// Glasscast — network self-diagnosis implementation.
+// AirGlass — network self-diagnosis implementation.
 // GPL-3.0. No upstream UxPlay code in this file.
 
 #include "diagnosis.h"
@@ -229,7 +229,7 @@ bool ensure_firewall_rule(const std::string& exe_path) {
         !rule) {
         return false;
     }
-    BSTR name = SysAllocString(L"Glasscast AirPlay receiver");
+    BSTR name = SysAllocString(L"AirGlass AirPlay receiver");
     BSTR app = SysAllocString(std::wstring(exe_path.begin(), exe_path.end()).c_str());
     rule->put_Name(name);
     rule->put_ApplicationName(app);

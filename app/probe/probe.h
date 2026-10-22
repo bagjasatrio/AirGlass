@@ -1,4 +1,4 @@
-// Glasscast — machine + network capability probe.
+// AirGlass — machine + network capability probe.
 //
 // Runs once at startup (and on demand from the pre-flight screen) to answer the
 // only question the preset UI needs: can this machine actually sustain

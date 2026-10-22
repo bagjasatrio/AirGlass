@@ -67,7 +67,7 @@ struct LiveSettings {
 
     std::atomic<bool> fullscreen{false};
     std::atomic<bool> chromeless{false};
-    // Glasscast: true when the preset was supplied on the command line, which
+    // AirGlass: true when the preset was supplied on the command line, which
     // means the pre-flight chooser must not appear. The chooser sets this
     // itself once the user picks, so it shows exactly once per launch.
     std::atomic<bool> preflight_skip{false};
@@ -79,7 +79,7 @@ private:
     mutable std::mutex ui_mutex_;
     ap::UiPreferences ui_preferences_;
     mutable std::mutex name_mutex_;
-    std::string receiver_name_ = "Glasscast";
+    std::string receiver_name_ = "AirGlass";
 };
 
 } // namespace ap::airplay

@@ -22,7 +22,7 @@ std::filesystem::path settings_path() {
     }
     std::filesystem::path base(wide_path);
     CoTaskMemFree(wide_path);
-    return base / L"glasscast" / L"settings.ini";
+    return base / L"airglass" / L"settings.ini";
 #else
     return {};
 #endif

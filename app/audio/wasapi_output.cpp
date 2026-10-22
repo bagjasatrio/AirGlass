@@ -1,4 +1,4 @@
-// Glasscast — WASAPI audio sink implementation.
+// AirGlass — WASAPI audio sink implementation.
 // GPL-3.0. No upstream UxPlay code in this file.
 
 #include "wasapi_output.h"

@@ -1,4 +1,4 @@
-// Glasscast — quality presets and their persistence.
+// AirGlass — quality presets and their persistence.
 // GPL-3.0. No upstream UxPlay code in this file.
 
 #pragma once
@@ -27,7 +27,7 @@ struct Stored {
     bool used_fallback = false;  // settings file was missing or corrupt
 };
 
-// %APPDATA%\glasscast\settings.ini. Missing or corrupt values fall back to
+// %APPDATA%\airglass\settings.ini. Missing or corrupt values fall back to
 // 1080p30, which every machine can run.
 Stored load();
 void save(ProbePreset p);

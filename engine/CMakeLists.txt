@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.21)
-project(glasscast VERSION 0.1.0 LANGUAGES C CXX)
+project(airglass VERSION 0.1.0 LANGUAGES C CXX)
 
-# Glasscast: prebuilt-FFmpeg finder must win over vcpkg's source-built module.
+# AirGlass: prebuilt-FFmpeg finder must win over vcpkg's source-built module.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
-set(GLASSCAST_FFMPEG_DIR "${CMAKE_CURRENT_LIST_DIR}/../vendor/ffmpeg"
+set(AIRGLASS_FFMPEG_DIR "${CMAKE_CURRENT_LIST_DIR}/../vendor/ffmpeg"
     CACHE PATH "Prebuilt FFmpeg root (BtbN win64-gpl-shared)")
 
 set(CMAKE_CXX_STANDARD 17)
@@ -24,7 +24,7 @@ endif()
 # Try three lookup paths in order (vcpkg / Linux pkg-config / raw find_*).
 set(LIBPLIST_TARGET "")
 
-# Glasscast: vcpkg puts both lib/ and debug/lib/ on CMAKE_PREFIX_PATH, and the
+# AirGlass: vcpkg puts both lib/ and debug/lib/ on CMAKE_PREFIX_PATH, and the
 # raw finder below happily picked the DEBUG import library for a Release build.
 # Pin the release copy explicitly when we know where vcpkg lives.
 if(WIN32)
@@ -355,7 +355,7 @@ add_executable(airplay-windows
     src/usb/pair_record.cpp
     src/usb/usb_supervisor.cpp
 
-    # ---- Glasscast additions ------------------------------------------------
+    # ---- AirGlass additions ------------------------------------------------
     ${CMAKE_CURRENT_LIST_DIR}/../app/probe/probe.cpp
     ${CMAKE_CURRENT_LIST_DIR}/../app/preset/preset.cpp
     ${CMAKE_CURRENT_LIST_DIR}/../app/diag/diagnosis.cpp
@@ -452,7 +452,7 @@ if(WIN32)
 
     set_target_properties(airplay-windows PROPERTIES
         WIN32_EXECUTABLE TRUE
-        OUTPUT_NAME glasscast)
+        OUTPUT_NAME airglass)
 
     # Released as a GUI app so no empty console window pops up when
     # launched from File Explorer. main() stays the entry point — the
