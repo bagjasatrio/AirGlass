@@ -939,6 +939,13 @@ void VideoRenderer::run(const std::string& title) {
     if (SDL_SetWindowHitTest(window, hit_test_cb, &ui) != 0)
         LOG_WARN << "Window resize hit-test unavailable: " << SDL_GetError();
     if (ui.chromeless) SDL_SetWindowMinimumSize(window, 160, 120);
+    // AirGlass: a stable, clean window title in chromeless mode. OBS captures
+    // by window title, and "AirGlass" (with chrome) vs "AirGlass Mirror" (video
+    // only) lets a scene keep the right source across restarts.
+    SDL_SetWindowTitle(window, ui.chromeless ? "AirGlass Mirror" : "AirGlass");
+#if SDL_VERSION_ATLEAST(2, 0, 16)
+    SDL_SetWindowAlwaysOnTop(window, ui.chromeless ? SDL_TRUE : SDL_FALSE);
+#endif
 
     std::array<char, 1024> recording_dir{};
     std::array<char, 51> receiver_name_buf{};
@@ -1158,6 +1165,11 @@ void VideoRenderer::run(const std::string& title) {
             (display_width() != prev_video_w || display_height() != prev_video_h);
         if (ui.chromeless != prev_chromeless) {
             SDL_SetWindowMinimumSize(window, ui.chromeless ? 160 : 960, ui.chromeless ? 120 : 720);
+            // AirGlass: keep the OBS-visible identity in sync with the mode.
+            SDL_SetWindowTitle(window, ui.chromeless ? "AirGlass Mirror" : "AirGlass");
+#if SDL_VERSION_ATLEAST(2, 0, 16)
+            SDL_SetWindowAlwaysOnTop(window, ui.chromeless ? SDL_TRUE : SDL_FALSE);
+#endif
             if (ui.chromeless && !fullscreen) {
                 saved_window_maximized = (SDL_GetWindowFlags(window) & SDL_WINDOW_MAXIMIZED) != 0;
                 if (saved_window_maximized) SDL_RestoreWindow(window);

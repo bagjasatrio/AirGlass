@@ -232,6 +232,12 @@ int main(int argc, char** argv) {
             }
         } else if (arg == "--hls-proxy-playback" || arg == "--hls") {
             hls_playback = true;
+        } else if (arg == "--obs") {
+            // AirGlass: start borderless with the UI hidden, so OBS "Window
+            // Capture" gets a clean video-only source named "AirGlass Mirror".
+            saved.chromeless = true;
+            saved.fullscreen = false;
+            LOG_INFO << "OBS mode: borderless, UI hidden, window titled 'AirGlass Mirror'";
         } else if (arg == "--mirror-hwaccel") {
             mirror_hwaccel = true;
         } else if ((arg == "--mirror-res" || arg == "-r") && i + 1 < argc) {
@@ -269,6 +275,8 @@ int main(int argc, char** argv) {
                 "                        Skips the pre-flight chooser.\n"
                 "  --probe               print machine/network capability report\n"
                 "                        and exit (no server, no firewall change)\n"
+                "  --obs                 start borderless with the UI hidden, for\n"
+                "                        OBS Window Capture of 'AirGlass Mirror'\n"
                 "  --log / --verbose     print init/runtime logs to stderr\n"
                 "                        (off by default in the released\n"
                 "                        binary)\n"
