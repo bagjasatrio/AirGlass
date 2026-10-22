@@ -215,6 +215,7 @@ int main(int argc, char** argv) {
     int  mirror_w = saved.mirror_width;
     int  mirror_h = saved.mirror_height;
     int  preset_fps = 0;                                   // AirGlass: 0 = upstream default
+    bool detach_requested = false;                         // AirGlass: separate mirror window
     std::optional<ap::probe::Preset> preset_applied;       // AirGlass
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -233,11 +234,15 @@ int main(int argc, char** argv) {
         } else if (arg == "--hls-proxy-playback" || arg == "--hls") {
             hls_playback = true;
         } else if (arg == "--obs") {
-            // AirGlass: start borderless with the UI hidden, so OBS "Window
-            // Capture" gets a clean video-only source named "AirGlass Mirror".
-            saved.chromeless = true;
+            // AirGlass: mirror goes to its own borderless window titled
+            // "AirGlass Mirror"; the main window keeps the UI so the OBS source
+            // contains nothing but the phone screen.
+            saved.chromeless = false;
             saved.fullscreen = false;
-            LOG_INFO << "OBS mode: borderless, UI hidden, window titled 'AirGlass Mirror'";
+            detach_requested = true;
+            LOG_INFO << "OBS mode: mirror in a separate borderless window 'AirGlass Mirror'";
+        } else if (arg == "--detach") {
+            detach_requested = true;
         } else if (arg == "--mirror-hwaccel") {
             mirror_hwaccel = true;
         } else if ((arg == "--mirror-res" || arg == "-r") && i + 1 < argc) {
@@ -275,8 +280,10 @@ int main(int argc, char** argv) {
                 "                        Skips the pre-flight chooser.\n"
                 "  --probe               print machine/network capability report\n"
                 "                        and exit (no server, no firewall change)\n"
-                "  --obs                 start borderless with the UI hidden, for\n"
-                "                        OBS Window Capture of 'AirGlass Mirror'\n"
+                "  --obs                 mirror in its own borderless window\n"
+                "                        titled 'AirGlass Mirror', UI stays here\n"
+                "                        (OBS Window Capture source). Same as\n"
+                "                        --detach; toggle at runtime with D\n"
                 "  --log / --verbose     print init/runtime logs to stderr\n"
                 "                        (off by default in the released\n"
                 "                        binary)\n"
@@ -345,6 +352,7 @@ int main(int argc, char** argv) {
     // A preset on the command line means the user already chose: skip the
     // pre-flight modal entirely.
     live_settings.preflight_skip.store(preset_applied.has_value());
+    live_settings.detach_mirror.store(detach_requested);
     live_settings.vsync_enabled.store(saved.vsync_enabled);
     live_settings.fullscreen.store(saved.fullscreen);
     live_settings.chromeless.store(saved.chromeless);

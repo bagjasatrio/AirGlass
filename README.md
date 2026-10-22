@@ -43,6 +43,27 @@ On the iPhone: Control Center → Screen Mirroring → your PC name.
 
 Presets are locked for the session: changing one means Stop, then Start. Mid-session renegotiation costs a 1–2 s black frame, which is worse than asking you to reconnect.
 
+## OBS: mirror in its own window
+
+For streaming or recording with OBS, run the mirror in a separate borderless window so the capture source contains **only the phone screen** — no sidebar, no stats, no background:
+
+```
+airglass.exe --obs
+```
+
+That opens two windows:
+
+| Window | Contents |
+|---|---|
+| `AirGlass` | the normal UI (sidebar, session state, settings) |
+| `AirGlass Mirror` | borderless, resizable, black background, aspect-fit video only |
+
+In OBS: **Sources → + → Window Capture → Window: `AirGlass Mirror`**. Use the *Windows 10 (1903 and up)* capture method; the BitBlt method cannot read a hardware-accelerated SDL window and will show black or leak the desktop behind it.
+
+Press `D` in the main window to toggle the detached mirror on and off mid-session. Enabling it mid-session while hardware decoding may require reconnecting the iPhone (the decoder rebinds its D3D11 device to the mirror window); starting with `--obs` avoids that entirely.
+
+The mirror window is intentionally **not** always-on-top: a topmost borderless window covers the UI on a single screen, and OBS captures it regardless.
+
 ## Build
 
 Requirements: Windows 10 1809+ or 11, Visual Studio 2022/2026 with the C++ workload, CMake ≥ 3.21, Git.

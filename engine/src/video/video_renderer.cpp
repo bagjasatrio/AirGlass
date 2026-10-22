@@ -822,6 +822,64 @@ void VideoRenderer::run(const std::string& title) {
     SDL_SetWindowMinimumSize(window, 960, 720);
 
     GpuVideo gpu_video;
+
+    // --- AirGlass: optional detached mirror window -------------------------
+    // The mirror gets its own borderless top-level HWND titled "AirGlass
+    // Mirror" so OBS Window Capture sees nothing but the phone screen, while
+    // this window keeps the panels and stats. Created lazily; toggled with
+    // --obs / --detach / the D key. Textures are recreated on every toggle
+    // because an SDL_Texture belongs to exactly one renderer.
+    SDL_Window*   mirror_window   = nullptr;
+    SDL_Renderer* mirror_renderer = nullptr;
+    GpuVideo      mirror_gpu_video;
+    bool          detach_active   = false;
+
+    auto mirror_window_open = [&]() -> bool {
+        if (mirror_window && mirror_renderer) return true;
+        // Start small and portrait, clamped to the usable display area; the
+        // paint path resizes to the real video aspect once frames arrive.
+        int w = 540;
+        int h = 960;
+        SDL_Rect usable{0, 0, 1280, 720};
+        if (SDL_GetDisplayUsableBounds(0, &usable) == 0) {
+            h = std::min(h, std::max(240, usable.h - 80));
+            w = std::max(180, static_cast<int>(h * 0.5625f));
+        }
+        const int pos_x = usable.x + (usable.w - w) / 2;
+        const int pos_y = usable.y + (usable.h - h) / 2;
+        // Deliberately NOT topmost: on a single screen a topmost borderless
+        // window covers the UI you just opened it from, and OBS Window Capture
+        // does not need it.
+        Uint32 flags = SDL_WINDOW_BORDERLESS | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
+        mirror_window = SDL_CreateWindow("AirGlass Mirror", pos_x, pos_y, w, h, flags);
+        if (!mirror_window) {
+            LOG_ERROR << "detach: mirror window create failed: " << SDL_GetError();
+            return false;
+        }
+        mirror_renderer = SDL_CreateRenderer(mirror_window, -1, renderer_flags);
+        if (!mirror_renderer) {
+            LOG_ERROR << "detach: mirror renderer create failed: " << SDL_GetError();
+            SDL_DestroyWindow(mirror_window);
+            mirror_window = nullptr;
+            return false;
+        }
+        mirror_gpu_video.init(mirror_renderer);
+        LOG_INFO << "detach: mirror window up (" << w << 'x' << h << ", borderless)";
+        return true;
+    };
+    auto mirror_window_close = [&]() {
+        mirror_gpu_video.reset_target();
+        if (mirror_renderer) SDL_DestroyRenderer(mirror_renderer);
+        if (mirror_window)   SDL_DestroyWindow(mirror_window);
+        mirror_renderer = nullptr;
+        mirror_window   = nullptr;
+        LOG_INFO << "detach: mirror window closed";
+    };
+
+    auto video_target = [&]() -> SDL_Renderer* {
+        return (detach_active && mirror_renderer) ? mirror_renderer : renderer;
+    };
+
 #if defined(_WIN32)
     SDL_SysWMinfo instance_window_info{};
     SDL_VERSION(&instance_window_info.version);
@@ -830,10 +888,20 @@ void VideoRenderer::run(const std::string& title) {
                  ap::platform::kInstanceWindowProperty, reinterpret_cast<HANDLE>(1));
 #endif
     gpu_video.init(renderer);
+    // AirGlass: if we start detached, the decoder and the conversion must share
+    // ONE D3D11 device — the mirror window's. Publishing the main renderer's
+    // device here while converting on the mirror renderer would hand the decoder
+    // textures it cannot share across devices (black frames).
+    if (live_settings_ && live_settings_->detach_mirror.load(std::memory_order_relaxed)) {
+        if (mirror_window_open()) {
+            detach_active = true;
+            LOG_INFO << "detach: decoder device bound to the mirror window renderer";
+        }
+    }
     {
         std::lock_guard<std::mutex> lock(mtx_);
         av_buffer_unref(&gpu_device_);
-        gpu_device_ = gpu_video.device_ref();
+        gpu_device_ = detach_active ? mirror_gpu_video.device_ref() : gpu_video.device_ref();
         gpu_ready_ = true;
         cv_.notify_all();
     }
@@ -1253,6 +1321,16 @@ void VideoRenderer::run(const std::string& title) {
                     case SDLK_r:
                         toggle_recording();
                         break;
+                    case SDLK_d:
+                        // AirGlass: move the mirror into / out of its own
+                        // borderless window (OBS Window Capture source).
+                        if (live_settings_) {
+                            const bool next =
+                                !live_settings_->detach_mirror.load(std::memory_order_relaxed);
+                            live_settings_->detach_mirror.store(next, std::memory_order_relaxed);
+                            LOG_INFO << "detach toggled: " << (next ? "on" : "off");
+                        }
+                        break;
                     default: break;
                 }
             }
@@ -1312,6 +1390,37 @@ void VideoRenderer::run(const std::string& title) {
             }
         }
 
+        // AirGlass: detach toggle. Because an SDL_Texture is bound to one
+        // renderer, switching windows invalidates the video texture — drop it
+        // and let the frame path recreate it on the new target.
+        {
+            const bool want_detach = live_settings_ &&
+                                     live_settings_->detach_mirror.load(std::memory_order_relaxed);
+            if (want_detach != detach_active) {
+                detach_active = want_detach;
+                if (video_tex) {
+                    SDL_DestroyTexture(video_tex);
+                    video_tex = nullptr;
+                    video_tex_w = video_tex_h = 0;
+                }
+                gpu_video.reset_target();
+                if (detach_active) {
+                    if (!mirror_window_open()) {
+                        detach_active = false;
+                    } else {
+                        // Runtime switch: frames already decoded on the main
+                        // renderer's D3D11 device cannot be shared into the new
+                        // window's device. Software decode switches cleanly;
+                        // hwaccel may need a reconnect to rebind the decoder.
+                        LOG_WARN << "detach enabled mid-session; if the mirror "
+                                    "stays black, reconnect the iPhone";
+                    }
+                } else {
+                    mirror_window_close();
+                }
+            }
+        }
+
         // Decide the SDL pixel format to use; depends on which path
         // delivered the frame.
         Uint32 desired_fmt = SDL_PIXELFORMAT_IYUV;
@@ -1334,7 +1443,7 @@ void VideoRenderer::run(const std::string& title) {
                 video_tex_fmt != desired_fmt) {
                 gpu_video.reset_target();
                 if (video_tex) SDL_DestroyTexture(video_tex);
-                video_tex = SDL_CreateTexture(renderer,
+                video_tex = SDL_CreateTexture(video_target(),
                     desired_fmt, desired_fmt == SDL_PIXELFORMAT_ARGB8888
                         ? SDL_TEXTUREACCESS_TARGET : SDL_TEXTUREACCESS_STREAMING, w, h);
                 video_tex_w   = w;
@@ -1352,9 +1461,10 @@ void VideoRenderer::run(const std::string& title) {
                     // the planes never crossed our buffers, just
                     // the FFmpeg pool → SDL staging texture.
                     if (af->format == AV_PIX_FMT_D3D11) {
-                        if (!gpu_video.convert(renderer, video_tex, af)) {
+                        GpuVideo& target_gpu = detach_active ? mirror_gpu_video : gpu_video;
+                        if (!target_gpu.convert(video_target(), video_tex, af)) {
                             LOG_ERROR << "D3D11 surface conversion failed";
-                            gpu_video.reset_target();
+                            target_gpu.reset_target();
                             SDL_DestroyTexture(video_tex);
                             video_tex = nullptr;
                         }
@@ -1569,6 +1679,12 @@ void VideoRenderer::run(const std::string& title) {
             (!has_active_dev || active_dev.kind != "Mirror");
 
         if (show_video) {
+            if (detach_active && mirror_renderer) {
+                // AirGlass: the video lives in its own window now; leave a
+                // neutral placeholder here so the UI does not look frozen.
+                SDL_SetRenderDrawColor(renderer, 16, 18, 20, 255);
+                SDL_RenderFillRect(renderer, nullptr);
+            } else {
             SDL_SetRenderDrawColor(renderer, 23, 30, 34, 255);
             SDL_RenderFillRect(renderer, nullptr);
             const int angle = rotation_degrees();
@@ -1586,6 +1702,7 @@ void VideoRenderer::run(const std::string& title) {
                              angle, nullptr, SDL_FLIP_NONE);
             if (show_pause_badge) {
                 draw_pause_badge(dst);
+            }
             }
         } else if (cover_tex && no_chrome) {
             // Cover art centered in the top 70% of the window; the bottom
@@ -1632,6 +1749,63 @@ void VideoRenderer::run(const std::string& title) {
             draw_centered(idle_ip_tex,   idle_ip_w,   idle_ip_h,   y_cursor);
             y_cursor += idle_ip_h + 12;
             draw_centered(idle_msg_tex,  idle_msg_w,  idle_msg_h,  y_cursor);
+        }
+
+        // --- AirGlass: paint and present the detached mirror window --------
+        // Runs every frame while detached, independent of this window's stage
+        // rect. Black background, aspect-fit video, no chrome at all, so OBS
+        // Window Capture on "AirGlass Mirror" sees only the phone screen.
+        if (detach_active && mirror_renderer && mirror_window) {
+            int mw = 0, mh = 0;
+            SDL_GetWindowSize(mirror_window, &mw, &mh);
+
+            // Fit the window to the stream once its dimensions are known, and
+            // keep it on screen: a 1080x1920 borderless window would hang off a
+            // 1080p display. Only resizes when the aspect is materially wrong,
+            // so a manual resize survives.
+            static int fit_w = 0, fit_h = 0;
+            if (show_video && video_tex_w > 0 && video_tex_h > 0) {
+                const bool dims_changed = (fit_w != video_tex_w || fit_h != video_tex_h);
+                const float want = static_cast<float>(video_tex_w) / static_cast<float>(video_tex_h);
+                const float have = (mh > 0) ? static_cast<float>(mw) / static_cast<float>(mh) : 0.0f;
+                if (dims_changed || std::fabs(have - want) > 0.02f) {
+                    SDL_Rect bounds{};
+                    const int display_index = SDL_GetWindowDisplayIndex(mirror_window);
+                    if (SDL_GetDisplayUsableBounds(display_index, &bounds) == 0) {
+                        int target_h = std::min(video_tex_h, static_cast<int>(bounds.h * 0.85f));
+                        int target_w = static_cast<int>(target_h * want);
+                        if (target_w > bounds.w) {
+                            target_w = static_cast<int>(bounds.w * 0.95f);
+                            target_h = static_cast<int>(target_w / want);
+                        }
+                        if (target_w > 0 && target_h > 0) {
+                            SDL_SetWindowSize(mirror_window, target_w, target_h);
+                            SDL_SetWindowPosition(mirror_window, SDL_WINDOWPOS_CENTERED,
+                                                  SDL_WINDOWPOS_CENTERED);
+                            SDL_GetWindowSize(mirror_window, &mw, &mh);
+                        }
+                    }
+                    fit_w = video_tex_w;
+                    fit_h = video_tex_h;
+                }
+            }
+
+            SDL_SetRenderDrawColor(mirror_renderer, 0, 0, 0, 255);
+            SDL_RenderClear(mirror_renderer);
+            if (show_video && video_tex && mw > 0 && mh > 0) {
+                const int angle = rotation_degrees();
+                SDL_Rect dst = fit_inside(display_width(), display_height(), mw, mh);
+                SDL_Rect copy_dst = dst;
+                if (angle % 180) {
+                    copy_dst.w = dst.h;
+                    copy_dst.h = dst.w;
+                    copy_dst.x = dst.x + (dst.w - copy_dst.w) / 2;
+                    copy_dst.y = dst.y + (dst.h - copy_dst.h) / 2;
+                }
+                SDL_RenderCopyEx(mirror_renderer, video_tex, nullptr, &copy_dst,
+                                 angle, nullptr, SDL_FLIP_NONE);
+            }
+            SDL_RenderPresent(mirror_renderer);
         }
 
         // Restore full-window viewport so ImGui can draw the side panels
@@ -2573,7 +2747,10 @@ void VideoRenderer::run(const std::string& title) {
     if (idle_ip_tex)   SDL_DestroyTexture(idle_ip_tex);
     if (idle_msg_tex)  SDL_DestroyTexture(idle_msg_tex);
     gpu_video.reset_target();
+    // video_tex may live on the mirror renderer when detached: destroy it
+    // before that renderer goes away.
     if (video_tex)     SDL_DestroyTexture(video_tex);
+    mirror_window_close();   // AirGlass: detached mirror window, if open
     if (cover_tex)     SDL_DestroyTexture(cover_tex);
     for (TTF_Font* f : fonts_big)   if (f) TTF_CloseFont(f);
     for (TTF_Font* f : fonts_small) if (f) TTF_CloseFont(f);
