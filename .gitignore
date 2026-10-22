@@ -1,0 +1,26 @@
+# Build output
+/build/
+/out/
+*.exe
+*.dll
+*.lib
+*.pdb
+*.ilk
+*.obj
+
+# Vendored dependencies (fetched by README steps, never committed)
+/vendor/ffmpeg/
+/vendor/ffmpeg.zip
+/vendor/vcpkg/
+/vendor/upstream/
+/vendor/uxplay/
+
+# User state
+*.ini
+*.log
+
+# Editors
+.vs/
+.vscode/
+.idea/
+*.user

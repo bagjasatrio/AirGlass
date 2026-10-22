@@ -1,0 +1,65 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache vcpkg packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            vendor/vcpkg
+            !vendor/vcpkg/buildtrees
+            !vendor/vcpkg/packages
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('engine/vcpkg.json') }}
+
+      - name: Bootstrap vcpkg
+        shell: bash
+        run: |
+          if [ ! -f vendor/vcpkg/vcpkg.exe ]; then
+            git clone --depth 1 https://github.com/microsoft/vcpkg.git vendor/vcpkg
+            ./vendor/vcpkg/bootstrap-vcpkg.bat -disableMetrics
+          fi
+          ./vendor/vcpkg/vcpkg.exe install openssl libplist sdl2 sdl2-ttf --triplet x64-windows
+
+      - name: Fetch prebuilt FFmpeg
+        shell: bash
+        run: |
+          if [ ! -d vendor/ffmpeg ]; then
+            curl -sL -o vendor/ffmpeg.zip \
+              https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl-shared.zip
+            powershell -Command "Expand-Archive -Force vendor/ffmpeg.zip -DestinationPath vendor/ffmpeg_tmp"
+            mv vendor/ffmpeg_tmp/ffmpeg-master-latest-win64-gpl-shared vendor/ffmpeg
+          fi
+
+      - name: Configure
+        shell: bash
+        run: |
+          cmake -S engine -B build -G "Visual Studio 17 2022" -A x64 \
+            -DCMAKE_TOOLCHAIN_FILE=vendor/vcpkg/scripts/buildsystems/vcpkg.cmake
+
+      - name: Build
+        shell: bash
+        run: cmake --build build --config Release --parallel
+
+      - name: Probe smoke test
+        shell: bash
+        run: |
+          ./build/Release/glasscast.exe --probe | tee probe.txt
+          grep -q "preset 1080p30" probe.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: glasscast-windows-x64
+          path: |
+            build/Release/glasscast.exe
+            build/Release/*.dll
+            probe.txt
