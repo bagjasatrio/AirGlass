@@ -24,3 +24,7 @@
 .vscode/
 .idea/
 *.user
+
+# Runtime artefacts written next to the exe
+/identity.key
+/imgui.ini
