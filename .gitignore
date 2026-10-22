@@ -28,3 +28,6 @@
 # Runtime artefacts written next to the exe
 /identity.key
 /imgui.ini
+
+# packaged release output
+/dist/
