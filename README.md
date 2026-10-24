@@ -33,6 +33,9 @@ Every free AirPlay receiver on Windows treats you like a trial user. AirGlass st
 
 ## Screenshots
 
+The interface is a liquid-glass surface: a soft aurora backdrop, translucent frosted panels with a lit top rim, and status as colour rather than boxes. Nothing is drawn in a heavy chrome frame — panels float over the backdrop instead of sitting in borders.
+
+
 ### Choose quality before you mirror
 
 Nothing is decided behind your back. Before a session starts, AirGlass probes your GPU, CPU and Wi-Fi band, then shows a verdict per preset — with the reason next to it.
