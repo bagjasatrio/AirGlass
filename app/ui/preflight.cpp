@@ -41,11 +41,11 @@ const char* preset_title(probe::Preset p) {
 const char* preset_hint(probe::Preset p) {
     switch (p) {
         case probe::Preset::P720p60:
-            return "Softer text, smooth motion. Works on 2.4 GHz.";
+            return "Softer text, smooth motion. Works on 2.4 GHz.";
         case probe::Preset::P1080p30:
             return "Sharp text, 30 fps. Safe default.";
         case probe::Preset::P1080p60:
-            return "Sharp and smooth. Needs GPU decode + 5 GHz.";
+            return "Sharp and smooth. Needs GPU decode + 5 GHz.";
         case probe::Preset::Auto:
             return "Picks once from the probe.";
     }
@@ -66,11 +66,38 @@ bool draw_preflight(PreflightState& state, const probe::ProbeResult& probe) {
     ImGui::SetNextWindowSize(ImVec2(520, 0), ImGuiCond_Appearing);
 
     bool chose = false;
+
+    // Glass sheet, same material as the chrome: translucent surface, bright rim,
+    // no grey title strip. Text stays at full contrast because this panel sits
+    // over a dimmed backdrop.
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(24, 22));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 22.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_PopupRounding, 22.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_PopupBorderSize, 1.0f);
+    // The modal is a decision surface, not decoration: a translucent sheet lets
+    // the dashboard text ghost through the preset rows, which reads as a bug.
+    ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(1.0f, 1.0f, 1.0f, 0.62f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.11f, 0.13f, 0.16f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_TextDisabled, ImVec4(0.30f, 0.34f, 0.38f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_TitleBg, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_TitleBgActive, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(1, 1, 1, 0.55f));
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(1, 1, 1, 0.70f));
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.72f, 0.83f, 1.0f, 0.80f));
+    ImGui::PushStyleColor(ImGuiCol_ModalWindowDimBg, ImVec4(0.10f, 0.14f, 0.20f, 0.38f));
+
     // No AlwaysAutoResize: the long hint strings used to stretch the modal past
     // the window edge. A fixed width plus wrapped text keeps it inside.
     if (ImGui::BeginPopupModal("Choose quality", nullptr,
                                ImGuiWindowFlags_NoSavedSettings |
-                                   ImGuiWindowFlags_NoResize)) {
+                                   ImGuiWindowFlags_NoResize |
+                                   ImGuiWindowFlags_NoTitleBar)) {
+        ImGui::SetWindowFontScale(1.22f);
+        ImGui::TextUnformatted("Choose quality");
+        ImGui::SetWindowFontScale(1.0f);
+        ImGui::Spacing();
         ImGui::TextUnformatted("How sharp should the mirror be?");
         ImGui::PushTextWrapPos(ImGui::GetContentRegionAvail().x);
         ImGui::TextDisabled("%s", probe::explain(probe, probe::Preset::Auto).c_str());
@@ -131,6 +158,8 @@ bool draw_preflight(PreflightState& state, const probe::ProbeResult& probe) {
         if (chose) ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
     }
+    ImGui::PopStyleColor(10);
+    ImGui::PopStyleVar(5);
     return chose;
 }
 

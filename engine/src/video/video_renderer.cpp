@@ -156,7 +156,7 @@ void apply_overlay_theme() {
     auto* c = s.Colors;
     c[ImGuiCol_WindowBg] = ImVec4(1, 1, 1, 1);
     c[ImGuiCol_Text] = ImVec4(.125f, .149f, .161f, 1);
-    c[ImGuiCol_TextDisabled] = ImVec4(.45f, .48f, .50f, 1);
+    c[ImGuiCol_TextDisabled] = ImVec4(.34f, .37f, .40f, 1);
     c[ImGuiCol_Border] = ImVec4(.90f, .91f, .90f, 1);
     c[ImGuiCol_Separator] = c[ImGuiCol_Border];
     c[ImGuiCol_FrameBg] = ImVec4(.988f, .992f, .984f, 1);
@@ -951,6 +951,22 @@ void VideoRenderer::run(const std::string& title) {
         SetPropW(instance_window_info.info.win.window,
                  ap::platform::kInstanceWindowProperty, reinterpret_cast<HANDLE>(1));
 #endif
+    // AirGlass: 128x128 dither texture for the ambient backdrop. Drawn at very
+    // low alpha, it removes the banding a wide pastel gradient shows at 8-bit.
+    SDL_Texture* noise_tex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
+                                              SDL_TEXTUREACCESS_STATIC, 128, 128);
+    if (noise_tex) {
+        static std::vector<uint32_t> noise_px(128 * 128);
+        uint32_t seed = 0x9E3779B9u;
+        for (auto& px : noise_px) {
+            seed = seed * 1664525u + 1013904223u;
+            const uint32_t alpha = (seed >> 24) % 22u;
+            px = (alpha << 24) | 0x00FFFFFFu;
+        }
+        SDL_UpdateTexture(noise_tex, nullptr, noise_px.data(), 128 * 4);
+        SDL_SetTextureBlendMode(noise_tex, SDL_BLENDMODE_BLEND);
+    }
+
     gpu_video.init(renderer);
     // AirGlass: if we start detached, the decoder and the conversion must share
     // ONE D3D11 device — the mirror window's. Publishing the main renderer's
@@ -1917,6 +1933,11 @@ void VideoRenderer::run(const std::string& title) {
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 
+        // AirGlass: soft ambient backdrop behind all chrome. Panels are
+        // translucent glass, so this gradient is what they frost.
+        receiver_ui::app_background(ImGui::GetBackgroundDrawList(), ImGui::GetIO().DisplaySize,
+                                    (ImTextureID)(intptr_t)noise_tex);
+
         // AirGlass: when the mirror lives in its own window, say so here instead
         // of leaving a mute dark rectangle where the video used to be.
         if (detach_active && stage_visible) {
@@ -2060,16 +2081,23 @@ void VideoRenderer::run(const std::string& title) {
         ImGui::SetNextWindowPos(ImVec2(0,0));
         ImGui::SetNextWindowSize(ImVec2(fw,toolbar_h));
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(20,0));
-        ImGui::Begin("##titlebar",nullptr,kPanelFlags|ImGuiWindowFlags_NoScrollbar);
+        ImGui::PushStyleColor(ImGuiCol_WindowBg,ImVec4(0,0,0,0));
+        ImGui::Begin("##titlebar",nullptr,kPanelFlags|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoBackground);
         auto* title_draw = ImGui::GetWindowDrawList();
+        // Glass bar: faint fill, specular sheen, one hairline where it meets
+        // the content instead of a drawn border box.
+        ui_draw::glass_panel(title_draw,ImVec2(0,0),ImVec2(fw,toolbar_h),0.f,ui_draw::glass::fill_faint,0.25f);
+        title_draw->AddLine(ImVec2(0,toolbar_h-1.f),ImVec2(fw,toolbar_h-1.f),ui_draw::glass::stroke_lo,1.0f);
         ui_draw::icon(title_draw,ui_draw::Icon::Cast,ImVec2(20,12),20,ui_draw::blue);
-        title_draw->AddText(bold_font,16,ImVec2(50,12),ink,"AirPlay Windows");
-        title_draw->AddLine(ImVec2(0,44),ImVec2(fw,44),line);
+        title_draw->AddText(bold_font,16,ImVec2(50,12),ink,"AirGlass");
         ImGui::SetCursorPos(ImVec2(fw-144,0));
         auto window_control = [&](const char* id, ui_draw::Icon kind) {
             const ImVec2 pos=ImGui::GetCursorScreenPos();
             const bool click=ui_draw::surface(id,ImVec2(48,44));
-            if (ImGui::IsItemHovered()) title_draw->AddRectFilled(pos,ImVec2(pos.x+48,pos.y+44),kind==ui_draw::Icon::Close ? IM_COL32(247,220,220,255) : IM_COL32(239,242,239,255));
+            if (ImGui::IsItemHovered()) {
+                const ImU32 hover_fill = kind==ui_draw::Icon::Close ? IM_COL32(255,196,196,150) : IM_COL32(255,255,255,120);
+                title_draw->AddRectFilled(pos,ImVec2(pos.x+48,pos.y+44),hover_fill,10);
+            }
             ui_draw::icon(title_draw,kind,ImVec2(pos.x+14,pos.y+12),20,muted);
             return click;
         };
@@ -2080,14 +2108,18 @@ void VideoRenderer::run(const std::string& title) {
         }
         ImGui::SameLine(0,0);
         if (window_control("##close",ui_draw::Icon::Close)) { SDL_Event event{}; event.type=SDL_QUIT; SDL_PushEvent(&event); }
-        ImGui::End(); ImGui::PopStyleVar();
+        ImGui::End(); ImGui::PopStyleColor(); ImGui::PopStyleVar();
 
         ImGui::SetNextWindowPos(ImVec2(0,toolbar_h));
         ImGui::SetNextWindowSize(ImVec2(side_bar_w,fh-toolbar_h-status_bar_h));
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(14,29));
-        ImGui::Begin("##navigation",nullptr,kPanelFlags|ImGuiWindowFlags_NoScrollbar);
+        ImGui::PushStyleColor(ImGuiCol_WindowBg,ImVec4(0,0,0,0));
+        ImGui::Begin("##navigation",nullptr,kPanelFlags|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoBackground);
         auto* rail=ImGui::GetWindowDrawList();
-        rail->AddLine(ImVec2(side_bar_w-1,toolbar_h),ImVec2(side_bar_w-1,fh-status_bar_h),line);
+        ui_draw::glass_panel(rail,ImVec2(0,toolbar_h),ImVec2(side_bar_w,fh-status_bar_h),0.f,
+                             IM_COL32(252,253,255,120),0.3f);
+        rail->AddLine(ImVec2(side_bar_w-1.f,toolbar_h),ImVec2(side_bar_w-1.f,fh-status_bar_h),
+                      IM_COL32(255,255,255,150),1.0f);
         ImGui::PushFont(small_font); ImGui::SetCursorPosX(26); ImGui::TextDisabled("YOUR SPACE"); ImGui::PopFont();
         ImGui::Dummy(ImVec2(0,5));
         if (ui_draw::nav("##home","Home",ui_draw::Icon::Home,ui.page==0,162,ui.page==0?bold_font:io.FontDefault)) ui.page=0;
@@ -2097,18 +2129,18 @@ void VideoRenderer::run(const std::string& title) {
         if (ui_draw::nav("##settings","Settings",ui_draw::Icon::Settings,ui.settings_open,162,io.FontDefault)) ui.settings_open=!ui.settings_open;
         ImGui::Separator(); ImGui::Dummy(ImVec2(0,3));
         ImGui::PushFont(small_font);
-        ImVec2 p=ImGui::GetCursorScreenPos(); rail->AddCircleFilled(ImVec2(p.x+11,p.y+8),3.5f,IM_COL32(44,161,116,255));
+        ImVec2 p=ImGui::GetCursorScreenPos(); rail->AddCircleFilled(ImVec2(p.x+11,p.y+8),3.5f,IM_COL32(58,150,112,255));
         ImGui::SetCursorPosX(36); ImGui::TextDisabled(has_active_dev ? "Device connected" : "Receiver available");
         ImGui::SetCursorPosX(25); ImGui::PushTextWrapPos(side_bar_w-15); ImGui::TextUnformatted(receiver); ImGui::PopTextWrapPos();
-        ImGui::PopFont(); ImGui::End(); ImGui::PopStyleVar();
+        ImGui::PopFont(); ImGui::End(); ImGui::PopStyleColor(); ImGui::PopStyleVar();
 
         const bool music_view=ui.page==1 && has_active_dev && active_dev.kind=="Audio";
         const bool video_view=ui.page==2 && show_video;
         ImGui::SetNextWindowPos(ImVec2(static_cast<float>(stage_x),toolbar_h));
         ImGui::SetNextWindowSize(ImVec2(static_cast<float>(stage_w)-14,static_cast<float>(stage_h)));
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(42,0));
-        ImGui::PushStyleColor(ImGuiCol_WindowBg,ImVec4(245/255.f,246/255.f,244/255.f,1));
-        ImGui::Begin("##content",nullptr,kPanelFlags|(video_view ? ImGuiWindowFlags_NoBackground : 0));
+        ImGui::PushStyleColor(ImGuiCol_WindowBg,ImVec4(0,0,0,0));
+        ImGui::Begin("##content",nullptr,kPanelFlags|ImGuiWindowFlags_NoBackground);
         auto* draw=ImGui::GetWindowDrawList();
         ImVec2 origin=ImGui::GetWindowPos();
         origin.y-=ImGui::GetScrollY();
@@ -2125,19 +2157,17 @@ void VideoRenderer::run(const std::string& title) {
             const float wrap=std::max(180.f,width-(video_view?506.f:0.f));
             const ImVec2 size=small_font->CalcTextSizeA(14,10000,wrap,note);
             draw->AddText(small_font,14,ImVec2(origin.x+stage_w-42-size.x,origin.y+bottom-size.y),
-                          IM_COL32(145,154,147,255),note,nullptr,wrap);
+                          IM_COL32(96,104,112,255),note,nullptr,wrap);
         };
         if (music_view || video_view) {
-            draw->AddRectFilled(ImVec2(origin.x+42,origin.y+30),ImVec2(origin.x+81,origin.y+69),IM_COL32(255,255,255,255),9);
-            draw->AddRect(ImVec2(origin.x+42,origin.y+30),ImVec2(origin.x+81,origin.y+69),line,9);
+            ui_draw::glass_panel(draw,ImVec2(origin.x+42,origin.y+30),ImVec2(origin.x+81,origin.y+69),14.f,ui_draw::glass::fill_strong,0.5f);
             ui_draw::icon(draw,ui_draw::Icon::Phone,ImVec2(origin.x+51,origin.y+39),21,muted);
             text_at(bold_font,93,31,ink,active_dev.name.empty()?"Connected device":active_dev.name.c_str());
-            draw->AddCircleFilled(ImVec2(origin.x+97,origin.y+60),3,IM_COL32(44,161,116,255));
+            draw->AddCircleFilled(ImVec2(origin.x+97,origin.y+60),3,IM_COL32(58,150,112,255));
             text_at(small_font,107,51,muted,music_view ? "Connected · Audio" : "Connected · Screen mirroring");
             if (firewall_notice) {
                 const float badge_x=stage_w-300.f;
-                draw->AddRectFilled(ImVec2(origin.x+badge_x,origin.y+36),ImVec2(origin.x+badge_x+125,origin.y+66),IM_COL32(255,247,227,255),15);
-                draw->AddRect(ImVec2(origin.x+badge_x,origin.y+36),ImVec2(origin.x+badge_x+125,origin.y+66),IM_COL32(235,216,167,255),15);
+                ui_draw::glass_pill(draw,ImVec2(origin.x+badge_x,origin.y+36),ImVec2(origin.x+badge_x+125,origin.y+66),ui_draw::glass::tint_amber);
                 draw->AddCircleFilled(ImVec2(origin.x+badge_x+14,origin.y+51),3.5f,IM_COL32(183,135,41,255));
                 text_at(small_font,badge_x+26,43,IM_COL32(123,87,30,255),"Check firewall");
             }
@@ -2155,17 +2185,16 @@ void VideoRenderer::run(const std::string& title) {
             text_at(page_font,42,36,ink,ui.page==0 ? "Welcome home." : ui.page==1 ? "Your music on this PC." : "Your screen, live.");
             const float badge_x=stage_w-167.f;
             const bool firewall_attention=firewall_notice && !has_active_dev;
-            draw->AddRectFilled(ImVec2(origin.x+badge_x,origin.y+36),ImVec2(origin.x+stage_w-42,origin.y+66),firewall_attention ? IM_COL32(255,247,227,255) : IM_COL32(233,243,236,255),15);
-            draw->AddRect(ImVec2(origin.x+badge_x,origin.y+36),ImVec2(origin.x+stage_w-42,origin.y+66),firewall_attention ? IM_COL32(235,216,167,255) : IM_COL32(217,234,221,255),15);
-            draw->AddCircleFilled(ImVec2(origin.x+badge_x+14,origin.y+51),3.5f,firewall_attention ? IM_COL32(183,135,41,255) : IM_COL32(44,161,116,255));
+            ui_draw::glass_pill(draw,ImVec2(origin.x+badge_x,origin.y+36),ImVec2(origin.x+stage_w-42,origin.y+66),
+                                firewall_attention ? ui_draw::glass::tint_amber : ui_draw::glass::tint_green);
+            draw->AddCircleFilled(ImVec2(origin.x+badge_x+14,origin.y+51),3.5f,firewall_attention ? IM_COL32(183,135,41,255) : IM_COL32(58,150,112,255));
             text_at(small_font,badge_x+26,43,firewall_attention ? IM_COL32(123,87,30,255) : IM_COL32(55,117,87,255),has_active_dev ? "Connected" : firewall_attention ? "Check firewall" : "Ready to receive");
         }
             if (firewall_notice) {
                 const bool can_allow=firewall.state==ap::platform::FirewallState::NeedsRule;
                 const float banner_y=86, banner_h=firewall.message.empty()?106.f:132.f;
                 const ImVec2 a(origin.x+42,origin.y+banner_y), b(origin.x+stage_w-42,origin.y+banner_y+banner_h);
-                draw->AddRectFilled(a,b,IM_COL32(255,247,227,255),10);
-                draw->AddRect(a,b,IM_COL32(235,216,167,255),10);
+                ui_draw::glass_panel(draw,a,b,18.f,ui_draw::glass::tint_amber,0.7f);
                 const char* banner_title=can_allow ? "Allow AirPlay through Windows Firewall" :
                     firewall.state==ap::platform::FirewallState::Managed ? "Windows Firewall blocks incoming connections" : "Firewall check unavailable";
                 text_at(bold_font,58,banner_y+14,IM_COL32(123,87,30,255),banner_title);
@@ -2189,7 +2218,7 @@ void VideoRenderer::run(const std::string& title) {
             draw->AddRectFilled(ImVec2(tl.x,tl.y+9),ImVec2(br.x,br.y+9),IM_COL32(48,63,51,12),12);
             if (cover_tex) draw->AddImageRounded((ImTextureID)(intptr_t)cover_tex,tl,br,ImVec2(0,0),ImVec2(1,1),IM_COL32_WHITE,12);
             else {
-                draw->AddRectFilled(tl,br,IM_COL32(231,235,229,255),12);
+                ui_draw::glass_panel(draw,tl,br,20.f,ui_draw::glass::fill_strong,0.5f);
                 ui_draw::icon(draw,ui_draw::Icon::Music,ImVec2(tl.x+cover_size/2-25,tl.y+cover_size/2-25),50,IM_COL32(145,158,147,255));
             }
             const float tx=wide?cover_x+cover_size+43:42;
@@ -2245,8 +2274,7 @@ void VideoRenderer::run(const std::string& title) {
             const float cx=stage_w*.5f;
             const float hero_y=(stage_h < 720 ? 90.f : std::max(105.f,(stage_h-690.f)*.3f+120.f))+firewall_offset;
             const ImVec2 tile(origin.x+cx-38,origin.y+hero_y);
-            draw->AddRectFilled(tile,ImVec2(tile.x+76,tile.y+76),IM_COL32(233,239,253,255),22);
-            draw->AddRect(tile,ImVec2(tile.x+76,tile.y+76),IM_COL32(219,229,252,255),22);
+            ui_draw::glass_panel(draw,tile,ImVec2(tile.x+76,tile.y+76),24.f,ui_draw::glass::tint_blue,0.6f);
             ui_draw::icon(draw,ui_draw::Icon::Cast,ImVec2(tile.x+19,tile.y+19),38,ui_draw::blue);
             center_text(heading_font,hero_y+99,ink,"Your device.");
             center_text(heading_font,hero_y+143,ink,"A little bigger.");
@@ -2254,30 +2282,31 @@ void VideoRenderer::run(const std::string& title) {
             center_text(io.FontDefault,hero_y+219,muted,"From your iPhone or iPad.");
             const float card_w=std::min(440.f,width),card_x=(stage_w-card_w)/2,card_y=hero_y+(stage_h<720?248:268);
             const ImVec2 cp(origin.x+card_x,origin.y+card_y);
-            draw->AddRectFilled(cp,ImVec2(cp.x+card_w,cp.y+78),IM_COL32_WHITE,12);
-            draw->AddRect(cp,ImVec2(cp.x+card_w,cp.y+78),line,12);
-            text_at(small_font,card_x+20,card_y+15,muted,"SELECT ON YOUR DEVICE");
+            ui_draw::glass_panel(draw,cp,ImVec2(cp.x+card_w,cp.y+78),20.f,ui_draw::glass::fill_soft,0.55f);
+            text_at(small_font,card_x+20,card_y+15,IM_COL32(62,70,80,255),"SELECT ON YOUR DEVICE");
             draw->PushClipRect(cp,ImVec2(cp.x+card_w-56,cp.y+78),true);
             text_at(receiver_font,card_x+20,card_y+38,ink,receiver);
             draw->PopClipRect();
             ImGui::SetCursorPos(ImVec2(card_x+card_w-54,card_y+21));
             if (ui_draw::icon_button("##rename",ui_draw::Icon::Settings,"Receiver settings")) ui.settings_open=true;
-            const float steps_y=card_y+(stage_h<720?105:121);
-            draw->AddLine(ImVec2(origin.x+42,origin.y+steps_y),ImVec2(origin.x+stage_w-42,origin.y+steps_y),line);
+            const float steps_y=card_y+(stage_h<720?96:110);
+            draw->AddLine(ImVec2(origin.x+52,origin.y+steps_y),ImVec2(origin.x+stage_w-52,origin.y+steps_y),IM_COL32(255,255,255,90),1.0f);
             const char* titles[]={"Same Wi-Fi network","Choose your mode","Select your PC"};
             const char* descriptions[]={"Connect your device and this PC to the same network.","Use AirPlay for music, or Screen Mirroring from Control Center.","Choose this receiver. The connection starts automatically."};
             for (int i=0;i<3;++i) {
-                const float x=42+i*(width+22)/3;
+                const float col_w=(width-2*22)/3.f;
+                const float x=42+i*(col_w+22);
                 const ImVec2 circle(origin.x+x+12,origin.y+steps_y+40);
-                draw->AddCircleFilled(circle,12,IM_COL32_WHITE,24); draw->AddCircle(circle,12,line,24);
+                draw->AddCircleFilled(circle,12,IM_COL32(255,255,255,170),24);
+                draw->AddCircle(circle,12,ui_draw::glass::stroke_lo,24,1.0f);
                 char n[2]={static_cast<char>('1'+i),0};
-                text_at(small_font,x+9,steps_y+32,muted,n);
+                text_at(small_font,x+9,steps_y+32,IM_COL32(44,52,62,255),n);
                 text_at(bold_font,x,steps_y+67,ink,titles[i]);
-                draw->AddText(small_font,16,ImVec2(origin.x+x,origin.y+steps_y+93),muted,descriptions[i],nullptr,(width-44)/3);
+                draw->AddText(small_font,16,ImVec2(origin.x+x,origin.y+steps_y+93),muted,descriptions[i],nullptr,col_w);
             }
             const char* help="My PC isn't showing up";
             const float help_w=small_font->CalcTextSizeA(16,10000,0,help).x;
-            ImGui::SetCursorPos(ImVec2((stage_w-help_w)/2,steps_y+157));
+            ImGui::SetCursorPos(ImVec2(42.f+(stage_w-84.f-help_w)*0.5f,steps_y+157));
             if (ui_draw::surface("##connection_help",ImVec2(help_w,22))) ImGui::OpenPopup("Connection help");
             const ImVec2 hp=ImGui::GetItemRectMin();
             draw->AddText(small_font,16,hp,muted,help); draw->AddLine(ImVec2(hp.x,hp.y+17),ImVec2(hp.x+help_w,hp.y+17),muted);
@@ -2288,8 +2317,8 @@ void VideoRenderer::run(const std::string& title) {
             ImGui::PushStyleVar(ImGuiStyleVar_PopupRounding,12);
             ImGui::PushStyleVar(ImGuiStyleVar_PopupBorderSize,1);
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(10,8));
-            ImGui::PushStyleColor(ImGuiCol_PopupBg,ImVec4(1,1,1,1));
-            ImGui::PushStyleColor(ImGuiCol_Border,ImVec4(230/255.f,232/255.f,231/255.f,1));
+            ImGui::PushStyleColor(ImGuiCol_PopupBg,ImVec4(1,1,1,.80f));
+            ImGui::PushStyleColor(ImGuiCol_Border,ImVec4(1,1,1,.60f));
             if (ImGui::BeginPopup("Connection help",ImGuiWindowFlags_NoMove)) {
                 ImGui::PushFont(page_font);
                 ImGui::TextUnformatted("Can't find your PC?");
@@ -2314,7 +2343,7 @@ void VideoRenderer::run(const std::string& title) {
             ImGui::PopStyleColor(2);
             ImGui::PopStyleVar(4);
             const float footer_y=std::max(steps_y+(stage_h<720?185:203),stage_h-34.f);
-            text_at(small_font,42,footer_y,IM_COL32(145,154,147,255),"Windows · Local network");
+            text_at(small_font,42,footer_y,IM_COL32(64,72,82,255),"Windows · Local network");
             if (ui.page==2) decoding_note(footer_y+16);
             ImGui::SetCursorPosY(footer_y+16); ImGui::Dummy(ImVec2(1,1));
         }
@@ -2862,6 +2891,7 @@ void VideoRenderer::run(const std::string& title) {
     if (idle_ip_tex)   SDL_DestroyTexture(idle_ip_tex);
     if (idle_msg_tex)  SDL_DestroyTexture(idle_msg_tex);
     gpu_video.reset_target();
+    if (noise_tex) { SDL_DestroyTexture(noise_tex); noise_tex = nullptr; }
     // video_tex may live on the mirror renderer when detached: destroy it
     // before that renderer goes away.
     if (video_tex)     SDL_DestroyTexture(video_tex);

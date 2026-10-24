@@ -7,7 +7,7 @@
 Mirror an iPhone or iPad to your PC at full 1080p, with audio that stays in sync, on hardware from a decade ago.
 No Bonjour install. No account. No watermark. No silent downgrade.
 
-[![Download](https://img.shields.io/badge/download-v0.1.0%20win64-blue?style=flat-square)](https://github.com/bagjasatrio/AirGlass/releases/latest)
+[![Download](https://img.shields.io/badge/download-v0.2.0%20win64-blue?style=flat-square)](https://github.com/bagjasatrio/AirGlass/releases/latest)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6?style=flat-square)](#requirements)
 [![Status](https://img.shields.io/badge/status-v0.1%20%C2%B7%20working-orange?style=flat-square)](#status)
@@ -53,7 +53,7 @@ The receiver name (`AirGlass`, or whatever you set in Settings) is exactly what 
 
 ## Quick start
 
-**No build needed** — download `AirGlass-0.1-win64.zip` from [Releases](https://github.com/bagjasatrio/AirGlass/releases/latest), unzip anywhere, run `airglass.exe`. The archive carries every runtime DLL, so nothing else has to be installed. (Windows SmartScreen warns once because the binary is unsigned: *More info → Run anyway*.)
+**No build needed** — download `AirGlass-0.2-win64.zip` from [Releases](https://github.com/bagjasatrio/AirGlass/releases/latest), unzip anywhere, run `airglass.exe`. The archive carries every runtime DLL, so nothing else has to be installed. (Windows SmartScreen warns once because the binary is unsigned: *More info → Run anyway*.)
 
 1. Run `airglass.exe`. Pick a quality preset when the chooser appears.
 2. On the iPhone: **Control Center → Screen Mirroring → AirGlass**.
