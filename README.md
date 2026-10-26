@@ -54,6 +54,12 @@ That line under the title (`D3D11VA; Wi-Fi 2.4 GHz @144 Mbps`) is real probe out
 
 The receiver name (`AirGlass`, or whatever you set in Settings) is exactly what you pick from Control Center. Three steps, one screen: same Wi-Fi → choose AirPlay or Screen Mirroring → select this PC. If the phone cannot see the PC, **My PC isn't showing up** runs the network diagnosis instead of opening a browser tab.
 
+## Website
+
+A landing page for the download lives at **https://airglass.vercel.app** and is deployed from [`site/`](site). It links straight to the newest release asset through `/api/download`, so nobody has to open the repository to get the zip.
+
+To deploy it yourself: `cd site && npx vercel link --project airglass && npx vercel deploy --prod`.
+
 ## Quick start
 
 **No build needed** — download `AirGlass-0.2-win64.zip` from [Releases](https://github.com/bagjasatrio/AirGlass/releases/latest), unzip anywhere, run `airglass.exe`. The archive carries every runtime DLL, so nothing else has to be installed. (Windows SmartScreen warns once because the binary is unsigned: *More info → Run anyway*.)
