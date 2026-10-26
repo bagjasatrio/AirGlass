@@ -40,8 +40,15 @@ jobs:
       - name: Configure
         shell: bash
         run: |
+          # CMAKE_TOOLCHAIN_FILE resolves relative to the build dir, so a relative
+          # path means build/vendor/... and configure dies with "Could not find
+          # toolchain file" even though vendor/vcpkg is right there.
+          test -f vendor/vcpkg/scripts/buildsystems/vcpkg.cmake || {
+            echo "::error::vcpkg tree incomplete: scripts/buildsystems/vcpkg.cmake missing"
+            exit 1
+          }
           cmake -S engine -B build -G "Visual Studio 17 2022" -A x64 \
-            -DCMAKE_TOOLCHAIN_FILE=vendor/vcpkg/scripts/buildsystems/vcpkg.cmake
+            -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/vendor/vcpkg/scripts/buildsystems/vcpkg.cmake"
 
       - name: Build
         shell: bash
