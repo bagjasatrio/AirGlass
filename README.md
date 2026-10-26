@@ -145,6 +145,20 @@ Performance contract (measured, not aspirational): RSS < 250 MB, CPU ≤ 15% tot
 
 ## Build
 
+```powershell
+# prebuilt FFmpeg shared libraries (resolves the current BtbN asset by API)
+pwsh scripts/fetch-ffmpeg.ps1
+
+# vcpkg dependencies, then the receiver itself
+cmake -S engine -B build -G "Visual Studio 18 2026" -A x64
+cmake --build build --config Release --parallel
+
+# tests
+python tests/smoke/test_probe.py
+python tests/cli/test_cli.py
+```
+
+
 Requirements: Visual Studio 2022 or 2026 with the C++ workload, CMake ≥ 3.21, Git.
 
 ```bash
