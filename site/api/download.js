@@ -5,6 +5,16 @@
 const REPO = "bagjasatrio/AirGlass";
 
 module.exports = async function handler(req, res) {
+  // Only a browser navigation should reach GitHub. Anything else (a crawler
+  // POSTing, a link preview doing HEAD) gets a cheap answer and burns no quota.
+  const method = (req.method || "GET").toUpperCase();
+  if (method !== "GET" && method !== "HEAD") {
+    res.setHeader("Allow", "GET, HEAD");
+    res.statusCode = 405;
+    res.end("Method Not Allowed");
+    return;
+  }
+
   try {
     const api = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
       headers: {

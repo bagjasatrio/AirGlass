@@ -217,6 +217,22 @@ int main(int argc, char** argv) {
     int  preset_fps = 0;                                   // AirGlass: 0 = upstream default
     bool detach_requested = true;                          // AirGlass: separate mirror window (default)
     std::optional<ap::probe::Preset> preset_applied;       // AirGlass
+    int cli_errors = 0;
+    // GUI subsystem build: stderr is usually not attached, so a rejected
+    // argument must also reach the user through a dialog. Never fail silently.
+    auto cli_error = [&](const std::string& message) {
+        ++cli_errors;
+        std::fprintf(stderr, "AirGlass: %s\n", message.c_str());
+        std::fflush(stderr);
+        // Only show a dialog when nobody is reading stderr (double-click launch).
+        // A dialog in a scripted run would block the caller forever.
+        const HANDLE err_handle = GetStdHandle(STD_ERROR_HANDLE);
+        const bool stderr_readable = err_handle && err_handle != INVALID_HANDLE_VALUE &&
+                                     GetFileType(err_handle) != FILE_TYPE_UNKNOWN;
+        if (!stderr_readable)
+            MessageBoxA(nullptr, message.c_str(), "AirGlass: command line",
+                        MB_ICONWARNING | MB_OK);
+    };
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--preset" && i + 1 < argc) {
@@ -228,8 +244,8 @@ int main(int argc, char** argv) {
                 ap::preset::save(chosen);
                 preset_applied = chosen;
             } else {
-                LOG_WARN << "--preset expects 720p60|1080p30|1080p60|auto, got '" << val
-                         << "'; using saved settings";
+                cli_error("--preset expects one of: 720p60, 1080p30, 1080p60, auto. Got '"
+                          + val + "'.");
             }
         } else if (arg == "--hls-proxy-playback" || arg == "--hls") {
             hls_playback = true;
@@ -264,14 +280,20 @@ int main(int argc, char** argv) {
                         mirror_w = w;
                         mirror_h = h;
                     } else {
-                        LOG_WARN << "--mirror-res out of range (" << val
-                                 << "), keeping default";
+                        cli_error("--mirror-res out of range: '" + val +
+                                  "' (allowed 320x240 to 7680x4320).");
                     }
                 } catch (...) {
-                    LOG_WARN << "--mirror-res not parseable (" << val
-                             << "), keeping default";
+                    cli_error("--mirror-res expects WxH, e.g. 1920x1080. Got '" + val + "'.");
                 }
+            } else {
+                // No separator at all: previously fell through and started the
+                // receiver as if the flag had never been passed.
+                cli_error("--mirror-res expects WxH, e.g. 1920x1080. Got '" + val + "'.");
             }
+        } else if (arg == "--preset" || arg == "--mirror-res" || arg == "-r") {
+            cli_error(arg + " needs a value, e.g. " +
+                      (arg == "--preset" ? "--preset 1080p30" : "--mirror-res 1920x1080") + ".");
         } else if (arg == "--log" || arg == "--verbose") {
             // Already handled in the pre-init scan above; consume so
             // future unknown-arg paths don't trip on it.
@@ -306,7 +328,16 @@ int main(int argc, char** argv) {
                 "                        Software fallback if unavailable.");
             ap::net::global_shutdown();
             return 0;
+        } else {
+            cli_error("Unknown option '" + arg + "'. Run airglass.exe --help.");
         }
+    }
+
+    if (cli_errors > 0) {
+        std::fprintf(stderr, "AirGlass: refusing to start with %d bad argument(s). "
+                             "Run airglass.exe --help.\n", cli_errors);
+        ap::net::global_shutdown();
+        return 2;
     }
 
     // AirGlass: resolve the preset into the three values the pipeline actually

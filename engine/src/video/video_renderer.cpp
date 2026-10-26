@@ -2415,15 +2415,19 @@ void VideoRenderer::run(const std::string& title) {
                 if (settings_section("Mirror resolution",
                         ImGuiTreeNodeFlags_DefaultOpen)) {
                     if (live_settings_) {
+                        // A session advertises one canvas, decided by the preset
+                        // before it started. Editing it mid-session changes the
+                        // next connection behind the user's back, which is the
+                        // exact failure this product exists to remove.
+                        if (has_active_dev)
+                            ImGui::TextDisabled(
+                                "Locked: the preset for this session owns the canvas. "
+                                "Disconnect to change it.");
+                        ImGui::BeginDisabled(has_active_dev);
                         struct Preset { const char* label; int w; int h; };
                         static const Preset presets[] = {
                             {"1920x1080  (Full HD)",      1920, 1080},
-                            {"2560x1440  (QHD, default)", 2560, 1440},
                             {"1920x1920  (square limit)",1920, 1920},
-                            {"2560x2560  (square limit)",2560, 2560},
-                            {"2868x2868  (square limit)",2868, 2868},
-                            {"3840x3840  (square limit)",3840, 3840},
-                            {"3840x2160  (4K UHD)",       3840, 2160},
                         };
                         int cur_w = live_settings_->mirror_width.load();
                         int cur_h = live_settings_->mirror_height.load();
@@ -2496,22 +2500,25 @@ void VideoRenderer::run(const std::string& title) {
                                             &height_buf, 0, 0);
                             height_active = ImGui::IsItemActive();
 
-                            if (width_buf  >= 320 && width_buf  <= 7680 &&
+                            if (width_buf  >= 320 && width_buf  <= 1920 &&
                                 width_buf  != cur_w) {
                                 live_settings_->mirror_width.store(width_buf);
                             }
-                            if (height_buf >= 240 && height_buf <= 4320 &&
+                            if (height_buf >= 240 && height_buf <= 1920 &&
                                 height_buf != cur_h) {
                                 live_settings_->mirror_height.store(height_buf);
                             }
                             ImGui::TextDisabled(
-                                "Range: 320-7680 x 240-4320");
+                                "Range: 320-1920 x 240-1920 (iOS mirrors near 1080p)");
                         }
                         ImGui::TextDisabled(
                             "Maximum video size. Your device chooses the actual stream resolution.");
                         if (video_tex_w > 0 && video_tex_h > 0)
                             ImGui::TextDisabled("Received: %d x %d", video_tex_w, video_tex_h);
-                        ImGui::TextDisabled("Applies on next device connection");
+                        ImGui::EndDisabled();
+                        ImGui::TextDisabled(has_active_dev
+                            ? "Disconnect and pick a preset to change this."
+                            : "Applies on next device connection");
                     } else {
                         ImGui::TextDisabled("(LiveSettings not wired)");
                     }
@@ -2520,10 +2527,15 @@ void VideoRenderer::run(const std::string& title) {
                         ImGuiTreeNodeFlags_DefaultOpen)) {
                     if (live_settings_) {
                         bool hw = live_settings_->mirror_hwaccel.load();
+                        ImGui::BeginDisabled(has_active_dev);
                         if (ImGui::Checkbox("Use GPU acceleration",
                                             &hw)) {
                             live_settings_->mirror_hwaccel.store(hw);
                         }
+                        ImGui::EndDisabled();
+                        if (has_active_dev)
+                            ImGui::TextDisabled(
+                                "Locked while connected: the preset chose the decoder path.");
                         ImGui::TextDisabled(
                             hw
                               ? "Uses your graphics card when available."
@@ -2651,11 +2663,16 @@ void VideoRenderer::run(const std::string& title) {
                         // keep the underlying fields in lockstep.
                         int cap = live_settings_->max_fps.load();
                         ImGui::SetNextItemWidth(200);
+                        ImGui::BeginDisabled(has_active_dev);
                         if (ImGui::SliderInt("Frame rate cap",
                                              &cap, 1, 60, "%d fps")) {
                             live_settings_->max_fps.store(cap);
                             live_settings_->refresh_rate.store(cap);
                         }
+                        ImGui::EndDisabled();
+                        if (has_active_dev)
+                            ImGui::TextDisabled(
+                                "Locked while connected: the preset set this rate.");
                         ImGui::TextDisabled(
                             "iOS caps mirror at 60 fps regardless of hint;"
                             " lower values force a deterministic cadence.");

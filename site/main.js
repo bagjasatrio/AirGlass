@@ -86,24 +86,3 @@ function start() {
 }
 
 start();
-
-// The download button points at /api/download, which redirects to the newest
-// release asset. If that route is unavailable (plain static hosting), fall back
-// to the releases page so the button never dead-ends.
-async function checkDownloadRoute() {
-  const links = document.querySelectorAll("[data-download]");
-  if (!links.length) return;
-  try {
-    const res = await fetch("/api/download", { method: "GET", redirect: "manual" });
-    if (res.type === "opaqueredirect" || res.ok || res.status === 0) return;
-    throw new Error(String(res.status));
-  } catch {
-    const fallback = "https://github.com/bagjasatrio/AirGlass/releases/latest";
-    links.forEach((a) => {
-      a.href = fallback;
-      a.setAttribute("title", "Opens the releases page");
-    });
-  }
-}
-
-checkDownloadRoute();
