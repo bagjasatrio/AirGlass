@@ -31,3 +31,10 @@
 
 # packaged release output
 /dist/
+
+# Vercel CLI link state
+.vercel
+.env*.local
+
+.vercel
+.env*

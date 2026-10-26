@@ -1,0 +1,11 @@
+# Only the landing page is deployed. The receiver sources stay in the repository.
+/build
+/dist
+/engine
+/vendor
+/docs
+/app
+/cmake
+/tests
+/scripts
+/.github
