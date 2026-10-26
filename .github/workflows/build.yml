@@ -31,14 +31,11 @@ jobs:
           ./vendor/vcpkg/vcpkg.exe install openssl libplist sdl2 sdl2-ttf --triplet x64-windows
 
       - name: Fetch prebuilt FFmpeg
-        shell: bash
+        shell: pwsh
         run: |
-          if [ ! -d vendor/ffmpeg ]; then
-            curl -sL -o vendor/ffmpeg.zip \
-              https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl-shared.zip
-            powershell -Command "Expand-Archive -Force vendor/ffmpeg.zip -DestinationPath vendor/ffmpeg_tmp"
-            mv vendor/ffmpeg_tmp/ffmpeg-master-latest-win64-gpl-shared vendor/ffmpeg
-          fi
+          # BtbN renames its Windows assets per build, so resolve the asset through
+          # the API instead of hardcoding an alias that can 404 into a corrupt zip.
+          ./scripts/fetch-ffmpeg.ps1 -Dest vendor/ffmpeg
 
       - name: Configure
         shell: bash
