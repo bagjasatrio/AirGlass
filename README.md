@@ -77,7 +77,7 @@ Starting with **v0.3.0**, AirGlass includes local wireless file drop and a dedic
 - **Two-Way Web Drop**: Scan the QR code on the desktop interface to open the mobile drop page in Safari. Send photos, 4K videos, or files directly to your PC, or send files from PC to iOS.
 - **Custom Save Destination**: Change download destination anytime without leaving temp files in user folders. Outgoing shared files are kept in an isolated staging cache.
 - **Anti-Sleep Keep-Alive & Auto-Retry**: Safari uploads leverage the Screen Wake Lock API and a silent video keep-alive with automatic 3x retries to prevent connection timeouts when the phone display sleeps.
-- **Lossless AirPlay Audio Sink**: Play Spotify, Apple Music, YouTube or web audio straight to PC speakers with WASAPI zero-latency playback.
+- **AirGlass Audio (Lossless Sink)**: Play Spotify, Apple Music, YouTube or web audio straight to PC speakers with WASAPI zero-latency playback.
 
 ## Presets
 

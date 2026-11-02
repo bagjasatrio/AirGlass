@@ -2409,7 +2409,7 @@ void VideoRenderer::run(const std::string& title) {
                 track_line(album_tex,album_w,album_h,.65f,IM_COL32(205,215,202,255));
             } else {
                 const std::string dev_name = active_dev.name.empty() ? "Connected Device" : active_dev.name;
-                text_at(heading_font, tx, ty, ink, "AirPlay Audio Stream");
+                text_at(heading_font, tx, ty, ink, "AirGlass Audio Stream");
                 ty += 32.f;
                 text_at(bold_font, tx, ty, IM_COL32(58,150,112,255), ("Source: " + dev_name).c_str());
                 ty += 22.f;
@@ -2448,7 +2448,7 @@ void VideoRenderer::run(const std::string& title) {
             const float right_w = std::max(260.f, stage_w - tx - 42.f);
             float ty = wide ? (cover_y + 6.f) : (cover_y + cover_size + 24.f);
 
-            text_at(heading_font, tx, ty, ink, "AirPlay Audio Player");
+            text_at(heading_font, tx, ty, ink, "AirGlass Audio Player");
             ty += 34.f;
             draw->AddText(small_font, 16.f, ImVec2(origin.x + tx, origin.y + ty), muted,
                           "Stream lossless music and podcasts from Apple Music, Spotify, YouTube Music, or Podcasts.", nullptr, right_w);
