@@ -56,9 +56,9 @@
       <figure class="shot">
         <picture>
           <source media="(max-width: 760px)" srcset="/assets/dash-mobile.webp" width="1030" height="755">
-          <img src="/assets/dashboard.webp" width="1220" height="800" alt="The AirGlass window on Windows, showing the receiver card and the three setup steps." fetchpriority="high" decoding="async">
+          <img src="/assets/dashboard.webp" width="1220" height="800" alt="The AirGlass Home workspace showing receiver status and tool cards." fetchpriority="high" decoding="async">
         </picture>
-        <figcaption class="shot-cap">The receiver card, at first run. Pick the name on the iPhone and it starts.</figcaption>
+        <figcaption class="shot-cap">The AirGlass Home dashboard: receiver status on your Wi-Fi network and quick access to tools.</figcaption>
       </figure>
     </div>
   </section>
@@ -104,6 +104,10 @@
         <h2>Pick the preset before you mirror</h2>
         <p>AirGlass probes your GPU, CPU and Wi-Fi band, then shows what this machine can hold. You choose. Nothing is decided silently, and the choice stays locked for that session. Sizes are quoted as the short side of the portrait screen, so 1080p is roughly 886 by 1920 in practice.</p>
       </div>
+      <figure class="shot shot-margin">
+        <img src="/assets/preflight.webp" width="1213" height="793" alt="AirGlass pre-flight quality chooser modal showing hardware probe and stream profiles." loading="lazy" decoding="async">
+        <figcaption class="shot-cap">The pre-flight quality chooser: hardware probe results and profile verdicts before streaming starts.</figcaption>
+      </figure>
       <ul class="preset-grid">
         <li class="tile">
           <div class="tile-top">
@@ -132,7 +136,8 @@
   <section class="mirror" id="mirror">
     <div class="wrap mirror-grid">
       <figure class="shot shot-small">
-        <img src="/assets/mirroring.webp" width="1213" height="793" alt="The AirGlass interface while an iPhone home screen is mirrored, showing the connected device and session controls." loading="lazy" decoding="async">
+        <img src="/assets/mirroring.webp" width="1213" height="793" alt="The AirGlass Screen Mirroring standby view with OBS detached window controls." loading="lazy" decoding="async">
+        <figcaption class="shot-cap">Screen Mirroring Studio: one-click standby and OBS window detachment.</figcaption>
       </figure>
       <div class="mirror-copy">
         <h2>A window with nothing but the phone</h2>
@@ -153,7 +158,19 @@
         <h2>Two-way Web Drop & Lossless Audio</h2>
         <p>AirGlass is more than a mirror. Transfer files across iOS and Windows over private Wi-Fi and stream hi-fi sound straight to PC speakers.</p>
       </div>
-      <ul class="why-list">
+
+      <div class="feature-showcase-grid">
+        <figure class="shot">
+          <img src="/assets/music.webp" width="1213" height="793" alt="AirGlass Audio Player view showing WASAPI master clock telemetry and instructions." loading="lazy" decoding="async">
+          <figcaption class="shot-cap">AirGlass Audio Player: 44.1 kHz / 16-bit WASAPI lossless PCM stream with sub-20ms latency.</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="/assets/webdrop.webp" width="1213" height="793" alt="AirGlass Web Drop view showing QR code pairing, transfer controls, and custom destination." loading="lazy" decoding="async">
+          <figcaption class="shot-cap">Two-Way Web Drop: instant QR code connection in Safari, custom folder save, and PC-to-iPhone sending.</figcaption>
+        </figure>
+      </div>
+
+      <ul class="why-list" style="margin-top: 40px;">
         <li>
           <h3>Two-way local Web Drop</h3>
           <p>Scan a QR code from the desktop interface to open the upload portal in Safari. Send photos, 4K videos, and documents to PC, or send files from PC to iPhone with one click.</p>

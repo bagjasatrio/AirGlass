@@ -13,7 +13,7 @@ No Bonjour install. No account. No watermark. No silent downgrade.
 [![Status](https://img.shields.io/badge/status-v0.3.0%20%C2%B7%20stable-green?style=flat-square)](#status)
 [![Built with](https://img.shields.io/badge/C%2B%2B20-D3D11%20%C2%B7%20FFmpeg%20%C2%B7%20WASAPI-informational?style=flat-square)](#build)
 
-![AirGlass mirroring an iPhone home screen to Windows](docs/screenshots/mirroring.png)
+![AirGlass home dashboard and action cards](docs/screenshots/dashboard.png)
 
 </div>
 
@@ -33,26 +33,42 @@ Every free AirPlay receiver on Windows treats you like a trial user. AirGlass st
 
 ## Screenshots
 
-The interface is a liquid-glass surface: a soft aurora backdrop, translucent frosted panels with a lit top rim, and status as colour rather than boxes. Nothing is drawn in a heavy chrome frame — panels float over the backdrop instead of sitting in borders.
+The interface is a liquid-glass surface: a soft aurora backdrop, translucent frosted panels with a lit top rim, and dedicated workspaces across Home, Screen Mirroring, Music Player, and Web Drop.
 
+### Welcome Home & Action Cards
 
-### Choose quality before you mirror
+The Home view provides an instant overview of the receiver status on your Wi-Fi network, quick launch cards for every tool, and network troubleshooting.
 
-Nothing is decided behind your back. Before a session starts, AirGlass probes your GPU, CPU and Wi-Fi band, then shows a verdict per preset — with the reason next to it.
+<img src="docs/screenshots/dashboard.png" alt="AirGlass Home dashboard showing active receiver and quick action cards" width="900">
 
-<img src="docs/screenshots/preflight.png" alt="AirGlass pre-flight quality chooser with verdict badges" width="900">
+### Choose Quality Before You Mirror
 
-- `recommended` (green) — this machine and network will hold it.
-- `possible` (amber) — will work, with a caveat that is spelled out.
-- `risky` (red) — needs hardware decode or a clean 5 GHz link that this machine does not have.
+Before streaming starts, AirGlass probes your GPU, CPU, and Wi-Fi link speed, evaluating presets against your hardware.
 
-That line under the title (`D3D11VA; Wi-Fi 2.4 GHz @144 Mbps`) is real probe output, not a guess.
+<img src="docs/screenshots/preflight.png" alt="AirGlass pre-flight quality chooser modal over the home screen" width="900">
 
-### The dashboard
+- `1080p30` (Default) — Sharp text, solid 30 fps, reliable on integrated graphics.
+- `1080p60` — Smooth 60 fps motion for games and animations; requires hardware decode (D3D11VA) and 5 GHz Wi-Fi.
+- `720p60` — Fluid motion for older machines or 2.4 GHz Wi-Fi.
+- `Auto` — Automatically probes and locks the best profile for your setup.
 
-<img src="docs/screenshots/dashboard.png" alt="AirGlass dashboard: receiver name, connection status, three setup steps" width="900">
+### Screen Mirroring Studio
 
-The receiver name (`AirGlass`, or whatever you set in Settings) is exactly what you pick from Control Center. Three steps, one screen: same Wi-Fi → choose AirPlay or Screen Mirroring → select this PC. If the phone cannot see the PC, **My PC isn't showing up** runs the network diagnosis instead of opening a browser tab.
+Ready to receive AirPlay mirroring with OBS integration. Features a separate borderless window (`AirGlass Mirror`) that outputs pure video without any window borders or UI chrome.
+
+<img src="docs/screenshots/mirroring.png" alt="AirGlass Screen Mirroring standby view with OBS integration controls" width="900">
+
+### AirGlass Audio Player
+
+Dedicated lossless audio receiver powered by a WASAPI master clock at 44.1 kHz / 16-bit. Streams live sound with sub-20ms latency and supports ID3 metadata or direct raw PCM playback.
+
+<img src="docs/screenshots/music.png" alt="AirGlass Audio Player view with WASAPI engine telemetry and streaming instructions" width="900">
+
+### Two-Way Web Drop
+
+Instant local file transfer between PC and iOS over LAN without internet. Scan the QR code to open the Safari transfer client, send photos/videos/documents to PC, or send files from PC to iOS.
+
+<img src="docs/screenshots/webdrop.png" alt="AirGlass Web Drop view with QR code pairing, destination selector, and PC to iPhone file sharing" width="900">
 
 ## Website
 
