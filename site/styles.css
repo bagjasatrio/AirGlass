@@ -73,6 +73,13 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+:where(a[href], button, summary, select, label[for]) {
+  cursor: pointer;
+}
+:where(:disabled, [aria-disabled="true"]) {
+  cursor: not-allowed;
+}
+
 html { scroll-behavior: smooth; }
 
 /* Sticky header must not clip a heading when an anchor is opened. */
@@ -356,26 +363,15 @@ body::before {
 @media (max-width: 1000px) { .preset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .auto-row { flex-direction: column; } }
 @media (max-width: 560px) { .preset-grid { grid-template-columns: minmax(0, 1fr); } }
 
-/* ---------- mirror window ---------- */
+/* ---------- mirror window & features ---------- */
 
 .mirror { padding-block: clamp(48px, 6vw, 92px); }
 .drop-feature {
-  padding-block: clamp(36px, 4.8vw, 72px);
-  border-top: 1px solid var(--line);
+  padding-block: clamp(48px, 6vw, 92px);
+  border-top: 1px solid var(--hair);
 }
 .shot-margin {
   margin: 32px 0 36px;
-}
-.feature-showcase-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(20px, 3vw, 36px);
-  margin-top: 32px;
-}
-@media (max-width: 800px) {
-  .feature-showcase-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 .mirror-grid {
   display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);

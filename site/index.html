@@ -3,26 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AirGlass - free iPhone screen mirroring for Windows</title>
-<meta name="description" content="A free, open-source Windows receiver for iPhone screen mirroring and audio. No account, no time limit, no trial clock. Portable zip, GPL-3.">
+<title>AirGlass - AirPlay Receiver, Lossless Audio, and Web Drop for Windows</title>
+<meta name="description" content="Free, open-source Windows receiver for iPhone screen mirroring, lossless WASAPI audio, and two-way local Web Drop file transfers. No account, no timer, GPL-3.">
 <link rel="canonical" href="https://airglass.vercel.app/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="AirGlass - free iPhone screen mirroring for Windows">
-<meta property="og:description" content="Free, open-source iPhone mirroring on Windows. No account, no time limit. Portable zip, GPL-3.">
+<meta property="og:title" content="AirGlass - AirPlay Receiver, Lossless Audio, and Web Drop for Windows">
+<meta property="og:description" content="Free, open-source iPhone mirroring, lossless WASAPI audio, and two-way local file drop for Windows. No account, no timer, GPL-3.">
 <meta property="og:url" content="https://airglass.vercel.app/">
 <meta property="og:site_name" content="AirGlass">
 <meta property="og:image" content="https://airglass.vercel.app/assets/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="AirGlass - free iPhone screen mirroring for Windows">
-<meta name="twitter:description" content="Free, open-source iPhone mirroring on Windows. No account, no time limit. Portable zip, GPL-3.">
+<meta name="twitter:title" content="AirGlass - AirPlay Receiver, Lossless Audio, and Web Drop for Windows">
+<meta property="twitter:description" content="Free, open-source iPhone mirroring, lossless WASAPI audio, and two-way local file drop for Windows. No account, no timer, GPL-3.">
 <meta name="twitter:image" content="https://airglass.vercel.app/assets/og.jpg">
 <meta name="theme-color" content="#e9effc" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0a1018" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="/assets/fonts/Geist.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=17">
+<link rel="stylesheet" href="/styles.css?v=18">
 </head>
 <body>
 <a class="skip" href="#download">Skip to download</a>
@@ -31,13 +31,14 @@
   <div class="nav-inner">
     <a class="wordmark" href="/">AirGlass</a>
     <nav aria-label="Sections">
-      <a href="#why">Why</a>
+      <a href="#why">Why AirGlass</a>
       <a href="#presets">Presets</a>
-      <a href="#mirror">Mirror window</a>
+      <a href="#mirror">Mirroring</a>
+      <a href="#audio">Lossless Audio</a>
       <a href="#drop">Web Drop</a>
       <a href="#requirements">Requirements</a>
     </nav>
-    <a class="btn btn-sm" href="/api/download" data-download>Download</a>
+    <a class="btn btn-sm" href="/api/download" data-download>Download v0.3.0</a>
   </div>
 </header>
 
@@ -46,17 +47,17 @@
   <section class="hero">
     <div class="wrap hero-grid">
       <div class="hero-copy">
-        <h1>Mirror your iPhone.<br>No clock, no account.</h1>
-        <p class="lede">A free receiver for iPhone screen mirroring and audio on Windows. Open source, no time limit, no watermark.</p>
+        <h1>AirPlay mirror, lossless audio, and local file drop for Windows.</h1>
+        <p class="lede">Stream your iPhone screen at 1080p60, listen through PC speakers with WASAPI lossless sound, and transfer photos and files wirelessly over private Wi-Fi. Free and open source under GPL-3.</p>
         <div class="cta-row">
-          <a class="btn" href="/api/download" data-download>Download</a>
-          <a class="btn btn-ghost" href="https://github.com/bagjasatrio/AirGlass">Read the source</a>
+          <a class="btn" href="/api/download" data-download>Download AirGlass v0.3.0 (64-bit)</a>
+          <a class="btn btn-ghost" href="https://github.com/bagjasatrio/AirGlass">Source code on GitHub</a>
         </div>
       </div>
       <figure class="shot">
         <picture>
-          <source media="(max-width: 760px)" srcset="/assets/dash-mobile.webp" width="1030" height="755">
-          <img src="/assets/dashboard.webp" width="1220" height="800" alt="The AirGlass Home workspace showing receiver status and tool cards." fetchpriority="high" decoding="async">
+          <source media="(max-width: 760px)" srcset="/assets/dash-mobile.webp" width="1030" height="675">
+          <img src="/assets/dashboard.webp" width="1525" height="1000" alt="The AirGlass Home workspace showing receiver status and tool cards." fetchpriority="high" decoding="async">
         </picture>
         <figcaption class="shot-cap">The AirGlass Home dashboard: receiver status on your Wi-Fi network and quick access to tools.</figcaption>
       </figure>
@@ -64,34 +65,34 @@
   </section>
 
   <!-- Facts: hairline row, no cards. -->
-  <section class="facts" aria-label="What it costs you">
+  <section class="facts" aria-label="Core features">
     <div class="wrap facts-grid">
-      <div class="fact"><h2>No time limit</h2><p>Sessions run as long as you want. There is no trial clock to beat.</p></div>
-      <div class="fact"><h2>1080p stays 1080p</h2><p>The receiver never quietly drops your resolution to keep up.</p></div>
-      <div class="fact"><h2>Audio drives the clock</h2><p>Video is timed against the audio stream, so sound does not drift late.</p></div>
-      <div class="fact"><h2>A clean capture window</h2><p>Mirroring opens in its own borderless window, ready for OBS.</p></div>
+      <div class="fact"><h2>No trial timers</h2><p>Sessions run indefinitely without 15-minute cutoffs, watermarks, or accounts.</p></div>
+      <div class="fact"><h2>1080p stays 1080p</h2><p>Hardware decode via D3D11VA preserves full resolution without silent downscaling.</p></div>
+      <div class="fact"><h2>WASAPI master clock</h2><p>Event-driven audio sink keeps video locked to the audio stream with sub-20ms skew.</p></div>
+      <div class="fact"><h2>Two-way Web Drop</h2><p>Direct browser transfer over LAN with Screen Wake Lock and isolated file staging.</p></div>
     </div>
   </section>
 
-  <!-- Why: headline plus a real row list, not three equal cards. -->
+  <!-- Why: headline plus a real row list. -->
   <section class="why" id="why">
     <div class="wrap why-grid">
       <div class="why-head">
-        <h2>Built against three things that annoyed me</h2>
-        <p>Most Windows receivers are paid, capped, or both. These are the three failures AirGlass was written to remove, each fixed at the layer where it actually breaks.</p>
+        <h2>Built to replace three frustrating walls</h2>
+        <p>Most Windows receivers are paid, capped, or break when headphones unplug. AirGlass solves each issue at the layer where the protocol actually operates.</p>
       </div>
       <ul class="why-list">
         <li>
-          <h3>Trial builds that stop mid-scene</h3>
-          <p>Fifteen minute caps and watermarks. AirGlass has no clock, no account and no upsell, because the licence underneath is GPL-3 and always will be.</p>
+          <h3>Trial builds that expire mid-presentation</h3>
+          <p>Fifteen-minute timers and intrusive watermarks. AirGlass has no clock, no account, and no upsell. The codebase is licensed under GPL-3 and remains fully open.</p>
         </li>
         <li>
-          <h3>Soft, smeared picture</h3>
-          <p>Frames go through hardware decode when the GPU offers it, then a direct NV12 to RGB shader. When hardware decode is missing, the frame rate is capped honestly instead of the resolution being quietly reduced.</p>
+          <h3>Smeared video and CPU thermal spikes</h3>
+          <p>Frames pass directly to hardware decode on your GPU, then render through an NV12-to-RGB Direct3D 11 shader. When hardware decode is unavailable, frame rates cap honestly instead of silently compressing resolution.</p>
         </li>
         <li>
-          <h3>Audio that arrives late</h3>
-          <p>A WASAPI event-driven sink feeds 20 ms buffers, and video is presented against the audio position. Dropping a video frame is allowed. Dropping audio is not.</p>
+          <h3>Audio that drifts or vanishes</h3>
+          <p>A WASAPI event-driven audio sink consumes 20ms buffers directly. Video presentation deadlines synchronize to the audio clock. Dropping a video frame is allowed; dropping audio is not.</p>
         </li>
       </ul>
     </div>
@@ -101,12 +102,12 @@
   <section class="presets" id="presets">
     <div class="wrap">
       <div class="preset-head">
-        <h2>Pick the preset before you mirror</h2>
-        <p>AirGlass probes your GPU, CPU and Wi-Fi band, then shows what this machine can hold. You choose. Nothing is decided silently, and the choice stays locked for that session. Sizes are quoted as the short side of the portrait screen, so 1080p is roughly 886 by 1920 in practice.</p>
+        <h2>Choose quality before you mirror</h2>
+        <p>AirGlass probes your GPU, CPU cores, and Wi-Fi band before starting, displaying real capability verdicts. Resolutions quote the short side of portrait orientation (1080p is approximately 886 by 1920 pixels).</p>
       </div>
       <figure class="shot shot-margin">
-        <img src="/assets/preflight.webp" width="1213" height="793" alt="AirGlass pre-flight quality chooser modal showing hardware probe and stream profiles." loading="lazy" decoding="async">
-        <figcaption class="shot-cap">The pre-flight quality chooser: hardware probe results and profile verdicts before streaming starts.</figcaption>
+        <img src="/assets/preflight.webp" width="1525" height="1000" alt="AirGlass pre-flight quality chooser modal showing hardware probe and stream profiles." loading="lazy" decoding="async">
+        <figcaption class="shot-cap">Pre-flight chooser: hardware probe results, Wi-Fi link rate, and locked stream profiles.</figcaption>
       </figure>
       <ul class="preset-grid">
         <li class="tile">
@@ -114,20 +115,20 @@
             <h3>1080p30</h3>
             <span class="tag">Default</span>
           </div>
-          <p>Holds on integrated graphics over a decent 5 GHz link. The safest way to start.</p>
+          <p>Sharp text rendering at 30 fps. Runs reliably on integrated graphics over standard 5 GHz Wi-Fi.</p>
         </li>
         <li class="tile">
           <div class="tile-top"><h3>1080p60</h3></div>
-          <p>Smoothest motion, and the first preset to stutter when hardware decode is unavailable.</p>
+          <p>Full 60 fps fluidity for gaming and fast UI animations. Requires hardware decode (D3D11VA) and 5 GHz Wi-Fi.</p>
         </li>
         <li class="tile">
           <div class="tile-top"><h3>720p60</h3></div>
-          <p>For older laptops, 2.4 GHz Wi-Fi and CPU-only decoding. Frame rate without the resolution.</p>
+          <p>Designed for older dual-core CPUs, legacy laptops, and 2.4 GHz wireless networks.</p>
         </li>
       </ul>
       <div class="auto-row">
         <h3>Auto</h3>
-        <p>Lets the probe pick for you, once, before the session starts. It is locked the same way as the others.</p>
+        <p>Probes GPU and Wi-Fi link speed on launch and selects the recommended profile automatically.</p>
       </div>
     </div>
   </section>
@@ -136,54 +137,58 @@
   <section class="mirror" id="mirror">
     <div class="wrap mirror-grid">
       <figure class="shot shot-small">
-        <img src="/assets/mirroring.webp" width="1213" height="793" alt="The AirGlass Screen Mirroring standby view with OBS detached window controls." loading="lazy" decoding="async">
+        <img src="/assets/mirroring.webp" width="1525" height="1000" alt="The AirGlass Screen Mirroring standby view with OBS detached window controls." loading="lazy" decoding="async">
         <figcaption class="shot-cap">Screen Mirroring Studio: one-click standby and OBS window detachment.</figcaption>
       </figure>
       <div class="mirror-copy">
-        <h2>A window with nothing but the phone</h2>
-        <p>Capture windows usually drag the whole application with them: sidebar, buttons, footer. AirGlass puts the mirrored screen in a second window with no chrome at all.</p>
+        <h2>A clean capture window for OBS and streaming</h2>
+        <p>Standard capture tools show the full receiver interface, buttons, and sidebars. AirGlass places the mirrored screen inside an independent borderless window titled AirGlass Mirror.</p>
         <ul class="plain-list">
-          <li>Borderless, so a window capture shows only the phone.</li>
-          <li>Drag it anywhere, resize from any edge.</li>
-          <li>When the iPhone screen sleeps, the session stays alive and the window goes black until it wakes.</li>
+          <li>Borderless window output captures purely the mobile screen inside OBS Studio or Discord.</li>
+          <li>Freely resizable from any edge or corner, and draggable across monitors.</li>
+          <li>When your iPhone screen turns off, the session remains active and displays a clean black frame until the device wakes up.</li>
         </ul>
       </div>
     </div>
   </section>
 
-  <!-- Web Drop & Audio: new in v0.3.0 -->
+  <!-- Audio: Lossless WASAPI Player -->
+  <section class="drop-feature" id="audio">
+    <div class="wrap mirror-grid">
+      <div class="mirror-copy">
+        <h2>Lossless AirGlass Audio Player</h2>
+        <p>Stream music, podcasts, and video audio from your iOS device directly to your PC speakers over Wi-Fi without Bluetooth compression artifacts.</p>
+        <ul class="plain-list">
+          <li>Delivers 44.1 kHz / 16-bit lossless PCM audio with sub-20ms latency via WASAPI.</li>
+          <li>Parses DAAP metadata containers (track title, artist, album, and duration) from Apple Music and supported apps.</li>
+          <li>Falls back gracefully to a clean live audio stream when third-party apps like Spotify or YouTube stream raw PCM without ID3 tags.</li>
+          <li>Independent tab navigation keeps your active workspace open when an audio session connects.</li>
+        </ul>
+      </div>
+      <figure class="shot shot-small">
+        <img src="/assets/music.webp" width="1525" height="1000" alt="AirGlass Audio Player view showing WASAPI master clock telemetry and instructions." loading="lazy" decoding="async">
+        <figcaption class="shot-cap">AirGlass Audio Player: 44.1 kHz / 16-bit WASAPI lossless PCM stream with sub-20ms latency.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- Web Drop: Two-way LAN transfer -->
   <section class="drop-feature" id="drop">
-    <div class="wrap">
-      <div class="why-head">
-        <h2>Two-way Web Drop & Lossless Audio</h2>
-        <p>AirGlass is more than a mirror. Transfer files across iOS and Windows over private Wi-Fi and stream hi-fi sound straight to PC speakers.</p>
+    <div class="wrap mirror-grid">
+      <figure class="shot shot-small">
+        <img src="/assets/webdrop.webp" width="1525" height="1000" alt="AirGlass Web Drop view showing QR code pairing, transfer controls, and custom destination." loading="lazy" decoding="async">
+        <figcaption class="shot-cap">Two-Way Web Drop: instant QR code connection in Safari, custom folder save, and PC-to-iPhone sending.</figcaption>
+      </figure>
+      <div class="mirror-copy">
+        <h2>Two-Way Web Drop over local Wi-Fi</h2>
+        <p>Move photos, 4K videos, and documents between iOS and Windows without cloud uploads, cables, or iTunes installations.</p>
+        <ul class="plain-list">
+          <li>Scan the desktop QR code with your iPhone camera to open the local Safari transfer portal instantly.</li>
+          <li>Send files from PC to iPhone using the Send Files button, staged safely in AppData without polluting work directories.</li>
+          <li>Custom save destination lets you choose where received files land on your PC.</li>
+          <li>Background keep-alive uses the Screen Wake Lock API and a silent video loop with 3x auto-retry so large file uploads survive screen locks.</li>
+        </ul>
       </div>
-
-      <div class="feature-showcase-grid">
-        <figure class="shot">
-          <img src="/assets/music.webp" width="1213" height="793" alt="AirGlass Audio Player view showing WASAPI master clock telemetry and instructions." loading="lazy" decoding="async">
-          <figcaption class="shot-cap">AirGlass Audio Player: 44.1 kHz / 16-bit WASAPI lossless PCM stream with sub-20ms latency.</figcaption>
-        </figure>
-        <figure class="shot">
-          <img src="/assets/webdrop.webp" width="1213" height="793" alt="AirGlass Web Drop view showing QR code pairing, transfer controls, and custom destination." loading="lazy" decoding="async">
-          <figcaption class="shot-cap">Two-Way Web Drop: instant QR code connection in Safari, custom folder save, and PC-to-iPhone sending.</figcaption>
-        </figure>
-      </div>
-
-      <ul class="why-list" style="margin-top: 40px;">
-        <li>
-          <h3>Two-way local Web Drop</h3>
-          <p>Scan a QR code from the desktop interface to open the upload portal in Safari. Send photos, 4K videos, and documents to PC, or send files from PC to iPhone with one click.</p>
-        </li>
-        <li>
-          <h3>Reliable background transfers</h3>
-          <p>Powered by the Screen Wake Lock API and a silent video keep-alive. Large transfers will not fail or hang simply because your phone display locked.</p>
-        </li>
-        <li>
-          <h3>AirGlass Audio (Lossless sink)</h3>
-          <p>Stream Spotify, Apple Music, and web audio through WASAPI with sub-20ms latency. Includes a dedicated music dashboard with DAAP tag inspection.</p>
-        </li>
-      </ul>
     </div>
   </section>
 
@@ -191,20 +196,20 @@
   <section class="req" id="requirements">
     <div class="wrap req-grid">
       <div class="req-copy">
-        <h2>What it needs</h2>
+        <h2>System requirements</h2>
         <dl class="spec-list">
-          <div><dt>Windows</dt><dd>10 version 1809 or newer, or Windows 11, 64-bit</dd></div>
-          <div><dt>Graphics</dt><dd>Any GPU with Direct3D 11 feature level 10_0. Hardware decode is used when present</dd></div>
-          <div><dt>Network</dt><dd>iPhone and PC on the same Wi-Fi network. 5 GHz recommended for 1080p</dd></div>
-          <div><dt>Disk</dt><dd>About 120 MB for the portable folder, no installer</dd></div>
+          <div><dt>Operating System</dt><dd>Windows 10 version 1809 or newer, or Windows 11 (64-bit)</dd></div>
+          <div><dt>Graphics</dt><dd>Any GPU with Direct3D 11 feature level 10_0. D3D11VA hardware decode is used when supported</dd></div>
+          <div><dt>Network</dt><dd>iPhone and PC on the same Wi-Fi SSID. 5 GHz recommended for 1080p60</dd></div>
+          <div><dt>Disk space</dt><dd>Approximately 120 MB for the portable folder, no installation required</dd></div>
         </dl>
       </div>
       <div class="req-steps">
         <h2>First run</h2>
         <ol class="steps">
-          <li><strong>Extract</strong><span>The zip holds the executable and the DLLs it needs. Keep them in the same folder.</span></li>
-          <li><strong>Run</strong><span>Start AirGlass, allow it through the firewall prompt on private networks, then open Control Center on the iPhone and pick Screen Mirroring.</span></li>
-          <li><strong>Choose a preset</strong><span>Pick the resolution and frame rate once, at the start. The receiver advertises exactly that.</span></li>
+          <li><strong>Extract portable archive</strong><span>Download and extract AirGlass-0.3-win64.zip to any directory. All runtime DLLs are included.</span></li>
+          <li><strong>Launch receiver</strong><span>Run airglass.exe and approve the Windows firewall prompt on private local networks.</span></li>
+          <li><strong>Connect your device</strong><span>Open Control Center on your iPhone or iPad, choose Screen Mirroring or Audio, and tap AirGlass. For file transfers, navigate to Web Drop and scan the QR code.</span></li>
         </ol>
       </div>
     </div>
@@ -213,12 +218,12 @@
   <!-- Honest limits. -->
   <section class="limits">
     <div class="wrap">
-      <h2>What it does not do</h2>
+      <h2>Protocol boundaries and technical limits</h2>
       <ul class="limit-grid">
-        <li><h3>It does not control the phone</h3><p>This is a receiver. Taps and typing on the PC do not reach iOS.</p></li>
-        <li><h3>It cannot show DRM video</h3><p>Protected playback stays black, by protocol design rather than by choice.</p></li>
-        <li><h3>It is not 4K</h3><p>AirPlay from iOS tops out near 1080p on the short side. The ceiling is the sender, not the app.</p></li>
-        <li><h3>It is unsigned</h3><p>There is no code signing certificate behind this build. SmartScreen warns once, then remembers.</p></li>
+        <li><h3>No remote phone control</h3><p>AirPlay is an output streaming protocol. It carries no touch or mouse injection signals back to iOS.</p></li>
+        <li><h3>No DRM playback</h3><p>FairPlay Streaming and HDCP copy protection render video frames black by Apple protocol design.</p></li>
+        <li><h3>Sender capped near 1080p</h3><p>iOS AirPlay encoders deliver up to 1080p on the short edge. The resolution limit is set by iOS, not Windows.</p></li>
+        <li><h3>Unsigned binary</h3><p>The build is unsigned. Windows SmartScreen displays a one-time notice on first run (click More Info, then Run Anyway).</p></li>
       </ul>
     </div>
   </section>
@@ -229,11 +234,11 @@
       <div class="download-panel">
         <div>
           <h2>Download AirGlass</h2>
-          <p class="dl-meta">Portable zip, about 60 MB. Extract and run, no installer and no admin rights.</p>
+          <p class="dl-meta">Portable 64-bit zip, approximately 63 MB. Extract and launch without installation or administrator privileges.</p>
         </div>
         <div class="dl-actions">
-          <a class="btn" href="/api/download" data-download>Download</a>
-          <p class="dl-note">Older builds and checksums live on the <a href="https://github.com/bagjasatrio/AirGlass/releases">releases page</a>. If SmartScreen appears, choose More info, then Run anyway. The source is public and the build is reproducible with CMake.</p>
+          <a class="btn" href="/api/download" data-download>Download AirGlass v0.3.0</a>
+          <p class="dl-note">Check release signatures and build artifacts on the <a href="https://github.com/bagjasatrio/AirGlass/releases">GitHub Releases page</a>. If SmartScreen appears, select More info and click Run anyway.</p>
         </div>
       </div>
     </div>
@@ -244,17 +249,18 @@
   <div class="wrap foot-grid">
     <div>
       <p class="wordmark small">AirGlass</p>
-      <p class="foot-note">A local receiver. Frames and audio stay on your own network.</p>
+      <p class="foot-note">Open source AirPlay receiver and local file transfer for Windows. Video, audio, and files remain strictly on your local network.</p>
     </div>
     <div class="foot-links">
-      <a href="https://github.com/bagjasatrio/AirGlass">Source</a>
-      <a href="https://github.com/bagjasatrio/AirGlass/blob/main/THIRD_PARTY_NOTICES.md">Third party notices</a>
-      <a href="https://github.com/bagjasatrio/AirGlass/blob/main/LICENSE">GPL-3.0</a>
+      <a href="https://github.com/bagjasatrio/AirGlass">GitHub Repository</a>
+      <a href="https://github.com/bagjasatrio/AirGlass/releases/tag/v0.3.0">Release Notes (v0.3.0)</a>
+      <a href="https://github.com/bagjasatrio/AirGlass/blob/main/THIRD_PARTY_NOTICES.md">Third Party Notices</a>
+      <a href="https://github.com/bagjasatrio/AirGlass/blob/main/LICENSE">GPL-3.0 License</a>
     </div>
-    <p class="foot-legal">Built on UxPlay and AirPlay-Windows. Not affiliated with Apple. AirPlay is a trademark of Apple Inc.</p>
+    <p class="foot-legal">Built with FFmpeg, Direct3D 11, WASAPI, and ImGui. Not affiliated with or endorsed by Apple Inc. AirPlay is a trademark of Apple Inc.</p>
   </div>
 </footer>
 
-<script src="/main.js?v=17" defer></script>
+<script src="/main.js?v=18" defer></script>
 </body>
 </html>

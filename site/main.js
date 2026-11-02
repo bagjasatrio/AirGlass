@@ -13,6 +13,8 @@ const revealTargets = [
   ".auto-row",
   ".mirror .shot",
   ".mirror-copy",
+  ".drop-feature .shot",
+  ".drop-feature .mirror-copy",
   ".req-grid > div",
   ".limit-grid li",
   ".download-panel",
