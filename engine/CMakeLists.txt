@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(airglass VERSION 0.1.0 LANGUAGES C CXX)
+project(airglass VERSION 0.3.0 LANGUAGES C CXX)
 
 # AirGlass: prebuilt-FFmpeg finder must win over vcpkg's source-built module.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
@@ -360,6 +360,8 @@ add_executable(airplay-windows
     ${CMAKE_CURRENT_LIST_DIR}/../app/preset/preset.cpp
     ${CMAKE_CURRENT_LIST_DIR}/../app/diag/diagnosis.cpp
     ${CMAKE_CURRENT_LIST_DIR}/../app/ui/preflight.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/../app/ui/qrcodegen.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/../app/drop/web_drop_server.cpp
 )
 
 target_include_directories(airplay-windows PRIVATE
@@ -368,7 +370,8 @@ target_include_directories(airplay-windows PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/../app/preset
     ${CMAKE_CURRENT_LIST_DIR}/../app/diag
     ${CMAKE_CURRENT_LIST_DIR}/../app/audio
-    ${CMAKE_CURRENT_LIST_DIR}/../app/ui)
+    ${CMAKE_CURRENT_LIST_DIR}/../app/ui
+    ${CMAKE_CURRENT_LIST_DIR}/../app/drop)
 
 target_include_directories(airplay-windows PRIVATE src)
 target_link_libraries(airplay-windows PRIVATE OpenSSL::Crypto ${FFMPEG_TARGETS} ${SDL2_TARGET} ${SDL2_TTF_TARGET} imgui)
@@ -534,7 +537,7 @@ if(BUILD_NETWORK_TESTS)
     target_link_libraries(test-cover-art PRIVATE ${FFMPEG_TARGETS})
     add_executable(test-audio-timing tools/test_audio_timing.cpp src/airplay/ntp_client.cpp
         src/audio/audio_receiver.cpp src/audio/aac_decoder.cpp src/audio/audio_output.cpp src/net/socket.cpp)
-    target_include_directories(test-audio-timing PRIVATE src ${FFMPEG_INCLUDE_DIRS_OK})
+    target_include_directories(test-audio-timing PRIVATE src ${FFMPEG_INCLUDE_DIRS_OK} ${CMAKE_CURRENT_LIST_DIR}/../app)
     target_link_libraries(test-audio-timing PRIVATE ${FFMPEG_TARGETS} ${SDL2_TARGET} OpenSSL::Crypto)
     if(WIN32)
         target_link_libraries(test-audio-timing PRIVATE ws2_32 iphlpapi)

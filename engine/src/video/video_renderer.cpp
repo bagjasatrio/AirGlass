@@ -11,6 +11,8 @@
 #include "preset/preset.h"
 #include "probe.h"
 #include "ui/preflight.h"
+#include "ui/qrcodegen.hpp"
+#include "drop/web_drop_server.h"
 #include "platform/single_instance.h"
 #include "platform/firewall.h"
 
@@ -135,9 +137,141 @@ bool browse_recording_folder(SDL_Window* w, const std::string& initial,
     if (should_uninitialize) CoUninitialize();
     return !selected.empty();
 }
+
+bool browse_drop_folder(SDL_Window* w, const std::string& initial,
+                        std::string& selected) {
+    SDL_SysWMinfo info;
+    SDL_VERSION(&info.version);
+    if (!SDL_GetWindowWMInfo(w, &info)) return false;
+
+    const HRESULT init_hr = CoInitializeEx(
+        nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    const bool should_uninitialize = SUCCEEDED(init_hr);
+
+    IFileOpenDialog* dialog = nullptr;
+    HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr,
+                                  CLSCTX_INPROC_SERVER,
+                                  IID_PPV_ARGS(&dialog));
+    if (SUCCEEDED(hr) && dialog) {
+        DWORD options = 0;
+        dialog->GetOptions(&options);
+        dialog->SetOptions(options | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM |
+                           FOS_PATHMUSTEXIST);
+        dialog->SetTitle(L"Choose save destination for Web Drop");
+
+        try {
+            const std::wstring initial_w =
+                std::filesystem::u8path(initial).wstring();
+            IShellItem* initial_item = nullptr;
+            if (SUCCEEDED(SHCreateItemFromParsingName(
+                    initial_w.c_str(), nullptr, IID_PPV_ARGS(&initial_item)))) {
+                dialog->SetFolder(initial_item);
+                initial_item->Release();
+            }
+        } catch (const std::exception&) {
+        }
+
+        hr = dialog->Show(info.info.win.window);
+        if (SUCCEEDED(hr)) {
+            IShellItem* result = nullptr;
+            if (SUCCEEDED(dialog->GetResult(&result)) && result) {
+                PWSTR path_w = nullptr;
+                if (SUCCEEDED(result->GetDisplayName(
+                        SIGDN_FILESYSPATH, &path_w)) && path_w) {
+                    selected = std::filesystem::path(path_w).u8string();
+                    CoTaskMemFree(path_w);
+                }
+                result->Release();
+            }
+        }
+        dialog->Release();
+    }
+    if (should_uninitialize) CoUninitialize();
+    return !selected.empty();
+}
+
+bool browse_files_to_share(SDL_Window* w, std::vector<std::string>& selected_files) {
+    SDL_SysWMinfo info;
+    SDL_VERSION(&info.version);
+    if (!SDL_GetWindowWMInfo(w, &info)) return false;
+
+    const HRESULT init_hr = CoInitializeEx(
+        nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    const bool should_uninitialize = SUCCEEDED(init_hr);
+
+    IFileOpenDialog* dialog = nullptr;
+    HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr,
+                                  CLSCTX_INPROC_SERVER,
+                                  IID_PPV_ARGS(&dialog));
+    if (SUCCEEDED(hr) && dialog) {
+        DWORD options = 0;
+        dialog->GetOptions(&options);
+        dialog->SetOptions(options | FOS_ALLOWMULTISELECT | FOS_FILEMUSTEXIST | FOS_FORCEFILESYSTEM);
+        dialog->SetTitle(L"Select files to send to iPhone");
+
+        hr = dialog->Show(info.info.win.window);
+        if (SUCCEEDED(hr)) {
+            IShellItemArray* items = nullptr;
+            if (SUCCEEDED(dialog->GetResults(&items)) && items) {
+                DWORD count = 0;
+                items->GetCount(&count);
+                for (DWORD i = 0; i < count; ++i) {
+                    IShellItem* item = nullptr;
+                    if (SUCCEEDED(items->GetItemAt(i, &item)) && item) {
+                        PWSTR path_w = nullptr;
+                        if (SUCCEEDED(item->GetDisplayName(SIGDN_FILESYSPATH, &path_w)) && path_w) {
+                            selected_files.push_back(std::filesystem::path(path_w).u8string());
+                            CoTaskMemFree(path_w);
+                        }
+                        item->Release();
+                    }
+                }
+                items->Release();
+            }
+        }
+        dialog->Release();
+    }
+    if (should_uninitialize) CoUninitialize();
+    return !selected_files.empty();
+}
 #else
 void enable_mica_backdrop(SDL_Window*) {}
+bool browse_drop_folder(SDL_Window*, const std::string&, std::string&) { return false; }
+bool browse_files_to_share(SDL_Window*, std::vector<std::string>&) { return false; }
 #endif
+
+void draw_qr_code(ImDrawList* draw, ImVec2 pos, float size, const std::string& text) {
+    if (text.empty()) return;
+    try {
+        using namespace qrcodegen;
+        QrCode qr = QrCode::encodeText(text.c_str(), QrCode::Ecc::MEDIUM);
+        const int qr_size = qr.getSize();
+        const float border = 12.0f;
+        const float actual_size = size - border * 2;
+        const float module_size = actual_size / static_cast<float>(qr_size);
+
+        // Rounded white background with subtle shadow
+        draw->AddRectFilled(ImVec2(pos.x - 3, pos.y - 3), ImVec2(pos.x + size + 3, pos.y + size + 3),
+                            IM_COL32(0, 0, 0, 30), 14.0f);
+        draw->AddRectFilled(pos, ImVec2(pos.x + size, pos.y + size),
+                            IM_COL32(255, 255, 255, 252), 12.0f);
+
+        const float start_x = pos.x + border;
+        const float start_y = pos.y + border;
+
+        for (int y = 0; y < qr_size; ++y) {
+            for (int x = 0; x < qr_size; ++x) {
+                if (qr.getModule(x, y)) {
+                    draw->AddRectFilled(
+                        ImVec2(start_x + x * module_size, start_y + y * module_size),
+                        ImVec2(start_x + (x + 1) * module_size + 0.5f, start_y + (y + 1) * module_size + 0.5f),
+                        IM_COL32(11, 15, 20, 255)
+                    );
+                }
+            }
+        }
+    } catch (...) {}
+}
 
 // Calm, light palette shared by the receiver views and settings drawer.
 void apply_overlay_theme() {
@@ -1107,6 +1241,9 @@ void VideoRenderer::run(const std::string& title) {
     const std::string default_recording_dir = VideoRecorder::default_directory();
     std::snprintf(recording_dir.data(), recording_dir.size(), "%s",
                   preferences.recording_directory.empty() ? default_recording_dir.c_str() : preferences.recording_directory.c_str());
+    if (!preferences.drop_directory.empty()) {
+        ap::drop::get_drop_server().set_drop_dir(preferences.drop_directory);
+    }
     auto toggle_recording = [&]() {
         if (!recorder_) return;
         if (recorder_->status().recording) recorder_->stop();
@@ -1134,6 +1271,7 @@ void VideoRenderer::run(const std::string& title) {
         auto current = preferences;
         current.diagnostics = ui.diagnostics;
         current.recording_directory = recording_dir.data();
+        current.drop_directory = ap::drop::get_drop_server().drop_dir();
         current.recording_codec = static_cast<int>(recording_options.codec);
         current.recording_encoder = static_cast<int>(recording_options.encoder);
         current.recording_bitrate = recording_options.bitrate_mbps;
@@ -2034,16 +2172,25 @@ void VideoRenderer::run(const std::string& title) {
             const ImVec2 p = ImGui::GetCursorScreenPos();
             const float width = ImGui::GetContentRegionAvail().x;
             auto* draw = ImGui::GetWindowDrawList();
-            draw->AddRectFilled(p,ImVec2(p.x+width,p.y+3),IM_COL32(225,229,223,255),2);
-            if (progress > 0) draw->AddRectFilled(p,ImVec2(p.x+width*progress,p.y+3),IM_COL32(87,106,89,255),2);
-            ImGui::Dummy(ImVec2(width,5));
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Playback position (read-only)");
-            ImGui::PushFont(small_font);
-            ImGui::TextDisabled("%u:%02u",static_cast<unsigned>(elapsed/60000),static_cast<unsigned>((elapsed/1000)%60));
-            char duration[32]; std::snprintf(duration,sizeof(duration),"%u:%02u",total/60000,(total/1000)%60);
-            ImGui::SameLine(); ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x-ImGui::CalcTextSize(duration).x);
-            ImGui::TextDisabled("%s",duration);
-            ImGui::PopFont();
+            if (total > 0) {
+                draw->AddRectFilled(p,ImVec2(p.x+width,p.y+3),IM_COL32(225,229,223,255),2);
+                if (progress > 0) draw->AddRectFilled(p,ImVec2(p.x+width*progress,p.y+3),IM_COL32(87,106,89,255),2);
+                ImGui::Dummy(ImVec2(width,5));
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("Playback position (read-only)");
+                ImGui::PushFont(small_font);
+                ImGui::TextDisabled("%u:%02u",static_cast<unsigned>(elapsed/60000),static_cast<unsigned>((elapsed/1000)%60));
+                char duration[32]; std::snprintf(duration,sizeof(duration),"%u:%02u",total/60000,(total/1000)%60);
+                ImGui::SameLine(); ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x-ImGui::CalcTextSize(duration).x);
+                ImGui::TextDisabled("%s",duration);
+                ImGui::PopFont();
+            } else {
+                ImGui::PushFont(small_font);
+                ImGui::TextColored(ImVec4(0.23f, 0.59f, 0.44f, 1.0f), "Live Audio Stream");
+                ImGui::SameLine();
+                ImGui::TextDisabled("· 44.1 kHz / 16-bit Lossless WASAPI");
+                ImGui::PopFont();
+                ImGui::Dummy(ImVec2(width, 4.f));
+            }
             ImGui::Dummy(ImVec2(0,5));
             auto command = [&](ap::airplay::MediaCommand action) {
                 audio_command_failed_.store(false); audio_command_pending_.store(true); audio_control_handler_(action,0);
@@ -2073,8 +2220,16 @@ void VideoRenderer::run(const std::string& title) {
         // chromeless, ESC peels back layers. The pulsing "Waiting
         // for AirPlay" ring stays drawn — it's part of the stage.
         if (!no_chrome) {
-        if (has_active_dev && !ui.was_connected) ui.page = active_dev.kind == "Audio" ? 1 : 2;
-        if (!has_active_dev && ui.was_connected) ui.page = 0;
+        // AirGlass: Do not auto-hijack user's active tab when a new device connects
+        // Only if user is on Home page (0), transition smoothly to active view
+        if (has_active_dev && !ui.was_connected) {
+            if (ui.page == 0) {
+                ui.page = (active_dev.kind == "Audio") ? 1 : 2;
+            }
+        }
+        if (!has_active_dev && ui.was_connected) {
+            // AirGlass: don't boot user off their current tab if disconnected
+        }
         ui.was_connected = has_active_dev;
         const char* receiver = receiver_name_buf.data();
         const ImU32 ink = ui_draw::ink, muted = ui_draw::muted, line = ui_draw::line;
@@ -2125,6 +2280,7 @@ void VideoRenderer::run(const std::string& title) {
         if (ui_draw::nav("##home","Home",ui_draw::Icon::Home,ui.page==0,162,ui.page==0?bold_font:io.FontDefault)) ui.page=0;
         if (ui_draw::nav("##music","Music",ui_draw::Icon::Music,ui.page==1,162,ui.page==1?bold_font:io.FontDefault)) ui.page=1;
         if (ui_draw::nav("##mirror","Screen mirroring",ui_draw::Icon::Screen,ui.page==2,162,ui.page==2?bold_font:io.FontDefault)) ui.page=2;
+        if (ui_draw::nav("##drop","Web Drop",ui_draw::Icon::Transfer,ui.page==3,162,ui.page==3?bold_font:io.FontDefault)) ui.page=3;
         ImGui::SetCursorPosY(fh-toolbar_h-status_bar_h-150);
         if (ui_draw::nav("##settings","Settings",ui_draw::Icon::Settings,ui.settings_open,162,io.FontDefault)) ui.settings_open=!ui.settings_open;
         ImGui::Separator(); ImGui::Dummy(ImVec2(0,3));
@@ -2134,8 +2290,15 @@ void VideoRenderer::run(const std::string& title) {
         ImGui::SetCursorPosX(25); ImGui::PushTextWrapPos(side_bar_w-15); ImGui::TextUnformatted(receiver); ImGui::PopTextWrapPos();
         ImGui::PopFont(); ImGui::End(); ImGui::PopStyleColor(); ImGui::PopStyleVar();
 
-        const bool music_view=ui.page==1 && has_active_dev && active_dev.kind=="Audio";
-        const bool video_view=ui.page==2 && show_video;
+        const bool is_home_page  = (ui.page == 0);
+        const bool is_music_page = (ui.page == 1);
+        const bool is_video_page = (ui.page == 2);
+        const bool is_drop_page  = (ui.page == 3);
+        const bool music_active  = has_active_dev && active_dev.kind == "Audio";
+        const bool video_active  = show_video;
+        const bool music_view    = is_music_page && music_active;
+        const bool video_view    = is_video_page && video_active;
+        const bool drop_view     = is_drop_page;
         ImGui::SetNextWindowPos(ImVec2(static_cast<float>(stage_x),toolbar_h));
         ImGui::SetNextWindowSize(ImVec2(static_cast<float>(stage_w)-14,static_cast<float>(stage_h)));
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(42,0));
@@ -2182,13 +2345,19 @@ void VideoRenderer::run(const std::string& title) {
                 disconnect_handler_();
             }
         } else {
-            text_at(page_font,42,36,ink,ui.page==0 ? "Welcome home." : ui.page==1 ? "Your music on this PC." : "Your screen, live.");
+            const auto drop_prog = ap::drop::get_drop_server().get_transfer_progress();
+            text_at(page_font,42,36,ink,is_home_page ? "Welcome home." : is_music_page ? "Your music on this PC." : is_video_page ? "Your screen, live." : "Web Drop · File Transfer");
             const float badge_x=stage_w-167.f;
             const bool firewall_attention=firewall_notice && !has_active_dev;
+            const bool drop_busy = drop_view && drop_prog.is_active;
+            const bool drop_has_fail = drop_view && drop_prog.failed_files > 0;
             ui_draw::glass_pill(draw,ImVec2(origin.x+badge_x,origin.y+36),ImVec2(origin.x+stage_w-42,origin.y+66),
-                                firewall_attention ? ui_draw::glass::tint_amber : ui_draw::glass::tint_green);
-            draw->AddCircleFilled(ImVec2(origin.x+badge_x+14,origin.y+51),3.5f,firewall_attention ? IM_COL32(183,135,41,255) : IM_COL32(58,150,112,255));
-            text_at(small_font,badge_x+26,43,firewall_attention ? IM_COL32(123,87,30,255) : IM_COL32(55,117,87,255),has_active_dev ? "Connected" : firewall_attention ? "Check firewall" : "Ready to receive");
+                                firewall_attention ? ui_draw::glass::tint_amber : drop_has_fail ? ui_draw::glass::tint_amber : drop_busy ? ui_draw::glass::tint_blue : ui_draw::glass::tint_green);
+            draw->AddCircleFilled(ImVec2(origin.x+badge_x+14,origin.y+51),3.5f,
+                                  firewall_attention ? IM_COL32(183,135,41,255) : drop_has_fail ? IM_COL32(220,38,38,255) : drop_busy ? IM_COL32(37,99,235,255) : IM_COL32(58,150,112,255));
+            text_at(small_font,badge_x+26,43,
+                    firewall_attention ? IM_COL32(123,87,30,255) : drop_has_fail ? IM_COL32(185,28,28,255) : drop_busy ? IM_COL32(29,78,216,255) : IM_COL32(55,117,87,255),
+                    drop_view ? (drop_busy ? "Receiving..." : drop_has_fail ? "Transfer Issue" : "LAN Active") : has_active_dev ? "Connected" : firewall_attention ? "Check firewall" : "Ready to receive");
         }
             if (firewall_notice) {
                 const bool can_allow=firewall.state==ap::platform::FirewallState::NeedsRule;
@@ -2218,22 +2387,38 @@ void VideoRenderer::run(const std::string& title) {
             draw->AddRectFilled(ImVec2(tl.x,tl.y+9),ImVec2(br.x,br.y+9),IM_COL32(48,63,51,12),12);
             if (cover_tex) draw->AddImageRounded((ImTextureID)(intptr_t)cover_tex,tl,br,ImVec2(0,0),ImVec2(1,1),IM_COL32_WHITE,12);
             else {
-                ui_draw::glass_panel(draw,tl,br,20.f,ui_draw::glass::fill_strong,0.5f);
-                ui_draw::icon(draw,ui_draw::Icon::Music,ImVec2(tl.x+cover_size/2-25,tl.y+cover_size/2-25),50,IM_COL32(145,158,147,255));
+                ui_draw::glass_panel(draw,tl,br,20.f,ui_draw::glass::fill_strong,0.55f);
+                const ImVec2 center(tl.x + cover_size * 0.5f, tl.y + cover_size * 0.5f);
+                draw->AddCircleFilled(center, cover_size * 0.40f, IM_COL32(24, 28, 36, 230));
+                draw->AddCircle(center, cover_size * 0.30f, IM_COL32(255, 255, 255, 30), 32, 1.0f);
+                draw->AddCircle(center, cover_size * 0.20f, IM_COL32(255, 255, 255, 25), 32, 1.0f);
+                ui_draw::icon(draw, ui_draw::Icon::Music, ImVec2(center.x - 20.f, center.y - 20.f), 40, ui_draw::blue);
             }
             const float tx=wide?cover_x+cover_size+43:42;
             float ty=wide?cover_y+20:cover_y+cover_size+22;
-            text_at(small_font,tx,ty,muted,playing_now ? "NOW PLAYING" : "PAUSED"); ty+=30;
-            auto track_line=[&](SDL_Texture* texture,int w,int h,float scale,ImU32 tint) {
-                if (!texture || w<=0 || h<=0) return;
-                const float fit=std::min(scale,(stage_w-tx-42)/w);
-                draw->AddImage((ImTextureID)(intptr_t)texture,ImVec2(origin.x+tx,origin.y+ty),ImVec2(origin.x+tx+w*fit,origin.y+ty+h*fit),ImVec2(0,0),ImVec2(1,1),tint);
-                ty+=h*fit+9;
-            };
-            track_line(title_tex,title_w,title_h,1,ink);
-            track_line(artist_tex,artist_w,artist_h,.8f,IM_COL32(134,146,137,255));
-            track_line(album_tex,album_w,album_h,.65f,IM_COL32(205,215,202,255));
-            ImGui::SetCursorPos(ImVec2(tx,ty+23));
+            text_at(small_font,tx,ty,muted,playing_now ? "NOW PLAYING" : "PAUSED"); ty+=26;
+            if (title_tex) {
+                auto track_line=[&](SDL_Texture* texture,int w,int h,float scale,ImU32 tint) {
+                    if (!texture || w<=0 || h<=0) return;
+                    const float fit=std::min(scale,(stage_w-tx-42)/w);
+                    draw->AddImage((ImTextureID)(intptr_t)texture,ImVec2(origin.x+tx,origin.y+ty),ImVec2(origin.x+tx+w*fit,origin.y+ty+h*fit),ImVec2(0,0),ImVec2(1,1),tint);
+                    ty+=h*fit+9;
+                };
+                track_line(title_tex,title_w,title_h,1,ink);
+                track_line(artist_tex,artist_w,artist_h,.8f,IM_COL32(134,146,137,255));
+                track_line(album_tex,album_w,album_h,.65f,IM_COL32(205,215,202,255));
+            } else {
+                const std::string dev_name = active_dev.name.empty() ? "Connected Device" : active_dev.name;
+                text_at(heading_font, tx, ty, ink, "AirPlay Audio Stream");
+                ty += 32.f;
+                text_at(bold_font, tx, ty, IM_COL32(58,150,112,255), ("Source: " + dev_name).c_str());
+                ty += 22.f;
+                text_at(small_font, tx, ty, muted, "Streaming live audio from your device to PC speakers.");
+                ty += 18.f;
+                text_at(small_font, tx, ty, IM_COL32(148, 163, 184, 255), "Note: Third-party apps (Spotify/Web) stream raw PCM without Apple ID3 tags.");
+                ty += 24.f;
+            }
+            ImGui::SetCursorPos(ImVec2(tx,ty+12));
             ImGui::BeginChild("##music_transport",ImVec2(stage_w-tx-42,165),false);
             if (audio_control_handler_) draw_audio_controls();
             ImGui::EndChild();
@@ -2244,6 +2429,55 @@ void VideoRenderer::run(const std::string& title) {
                 text_at(small_font,67,footer_y+19,muted,"Playing from your device on this PC");
                 ImGui::SetCursorPosY(footer_y+45); ImGui::Dummy(ImVec2(1,1));
             }
+        } else if (is_music_page) {
+            // Dedicated Music / Audio Receiver Hub when idle
+            const bool wide = stage_w >= 780;
+            const float cover_size = wide ? std::min(280.f, width * 0.40f) : 210.f;
+            const float cover_x = wide ? 42.f : (stage_w - cover_size) / 2.f;
+            const float cover_y = (wide ? 110.f : 95.f) + firewall_offset;
+            const ImVec2 tl(origin.x + cover_x, origin.y + cover_y);
+            const ImVec2 br(tl.x + cover_size, tl.y + cover_size);
+
+            ui_draw::glass_panel(draw, tl, br, 24.f, ui_draw::glass::fill_strong, 0.55f);
+            draw->AddCircleFilled(ImVec2(tl.x + cover_size * 0.5f, tl.y + cover_size * 0.5f), cover_size * 0.38f, IM_COL32(24, 28, 36, 220));
+            draw->AddCircle(ImVec2(tl.x + cover_size * 0.5f, tl.y + cover_size * 0.5f), cover_size * 0.28f, IM_COL32(255, 255, 255, 30), 32, 1.0f);
+            draw->AddCircle(ImVec2(tl.x + cover_size * 0.5f, tl.y + cover_size * 0.5f), cover_size * 0.18f, IM_COL32(255, 255, 255, 25), 32, 1.0f);
+            ui_draw::icon(draw, ui_draw::Icon::Music, ImVec2(tl.x + cover_size * 0.5f - 20.f, tl.y + cover_size * 0.5f - 20.f), 40, ui_draw::blue);
+
+            const float tx = wide ? (cover_x + cover_size + 42.f) : 42.f;
+            const float right_w = std::max(260.f, stage_w - tx - 42.f);
+            float ty = wide ? (cover_y + 6.f) : (cover_y + cover_size + 24.f);
+
+            text_at(heading_font, tx, ty, ink, "AirPlay Audio Player");
+            ty += 34.f;
+            draw->AddText(small_font, 16.f, ImVec2(origin.x + tx, origin.y + ty), muted,
+                          "Stream lossless music and podcasts from Apple Music, Spotify, YouTube Music, or Podcasts.", nullptr, right_w);
+            ty += 42.f;
+
+            // Audio Specs Card
+            const ImVec2 spec_a(origin.x + tx, origin.y + ty);
+            const ImVec2 spec_b(origin.x + tx + right_w, origin.y + ty + 84.f);
+            ui_draw::glass_panel(draw, spec_a, spec_b, 14.f, ui_draw::glass::tint_blue, 0.45f);
+
+            text_at(small_font, tx + 16.f, ty + 12.f, IM_COL32(37,99,235,255), "AUDIO ENGINE · WASAPI MASTER CLOCK");
+            text_at(bold_font, tx + 16.f, ty + 30.f, ink, "44.1 kHz / 16-bit Lossless PCM (Zero Latency)");
+            text_at(small_font, tx + 16.f, ty + 56.f, IM_COL32(58,150,112,255), "Ready to receive · Audio buffer synchronized");
+
+            ty += 100.f;
+
+            // Steps
+            text_at(bold_font, tx, ty, ink, "How to Stream Music to this PC:");
+            ty += 24.f;
+            const char* audio_steps[] = {
+                "1. Play any song or podcast on your iPhone or iPad.",
+                "2. Open Control Center and tap the AirPlay icon in Now Playing.",
+                "3. Tap '%s' in the speaker list — sound plays through PC speakers."
+            };
+            char step3_buf[256];
+            std::snprintf(step3_buf, sizeof(step3_buf), audio_steps[2], receiver);
+            draw->AddText(small_font, 16.f, ImVec2(origin.x + tx, origin.y + ty), muted, audio_steps[0]); ty += 22.f;
+            draw->AddText(small_font, 16.f, ImVec2(origin.x + tx, origin.y + ty), muted, audio_steps[1]); ty += 22.f;
+            draw->AddText(small_font, 16.f, ImVec2(origin.x + tx, origin.y + ty), muted, step3_buf);
         } else if (video_view) {
             ImGui::SetCursorPos(ImVec2(42,stage_h-47.f));
             const bool recording=recorder_ && recorder_->status().recording;
@@ -2270,43 +2504,297 @@ void VideoRenderer::run(const std::string& title) {
             }
             ImGui::PopStyleVar();
             decoding_note(stage_h-12.f);
-        } else {
-            const float cx=stage_w*.5f;
-            const float hero_y=(stage_h < 720 ? 90.f : std::max(105.f,(stage_h-690.f)*.3f+120.f))+firewall_offset;
-            const ImVec2 tile(origin.x+cx-38,origin.y+hero_y);
-            ui_draw::glass_panel(draw,tile,ImVec2(tile.x+76,tile.y+76),24.f,ui_draw::glass::tint_blue,0.6f);
-            ui_draw::icon(draw,ui_draw::Icon::Cast,ImVec2(tile.x+19,tile.y+19),38,ui_draw::blue);
-            center_text(heading_font,hero_y+99,ink,"Your device.");
-            center_text(heading_font,hero_y+143,ink,"A little bigger.");
-            center_text(io.FontDefault,hero_y+194,muted,"Your music and your screen, right here on this PC.");
-            center_text(io.FontDefault,hero_y+219,muted,"From your iPhone or iPad.");
-            const float card_w=std::min(440.f,width),card_x=(stage_w-card_w)/2,card_y=hero_y+(stage_h<720?248:268);
-            const ImVec2 cp(origin.x+card_x,origin.y+card_y);
-            ui_draw::glass_panel(draw,cp,ImVec2(cp.x+card_w,cp.y+78),20.f,ui_draw::glass::fill_soft,0.55f);
-            text_at(small_font,card_x+20,card_y+15,IM_COL32(62,70,80,255),"SELECT ON YOUR DEVICE");
-            draw->PushClipRect(cp,ImVec2(cp.x+card_w-56,cp.y+78),true);
-            text_at(receiver_font,card_x+20,card_y+38,ink,receiver);
-            draw->PopClipRect();
-            ImGui::SetCursorPos(ImVec2(card_x+card_w-54,card_y+21));
-            if (ui_draw::icon_button("##rename",ui_draw::Icon::Settings,"Receiver settings")) ui.settings_open=true;
-            const float steps_y=card_y+(stage_h<720?96:110);
-            draw->AddLine(ImVec2(origin.x+52,origin.y+steps_y),ImVec2(origin.x+stage_w-52,origin.y+steps_y),IM_COL32(255,255,255,90),1.0f);
-            const char* titles[]={"Same Wi-Fi network","Choose your mode","Select your PC"};
-            const char* descriptions[]={"Connect your device and this PC to the same network.","Use AirPlay for music, or Screen Mirroring from Control Center.","Choose this receiver. The connection starts automatically."};
-            for (int i=0;i<3;++i) {
-                const float col_w=(width-2*22)/3.f;
-                const float x=42+i*(col_w+22);
-                const ImVec2 circle(origin.x+x+12,origin.y+steps_y+40);
-                draw->AddCircleFilled(circle,12,IM_COL32(255,255,255,170),24);
-                draw->AddCircle(circle,12,ui_draw::glass::stroke_lo,24,1.0f);
-                char n[2]={static_cast<char>('1'+i),0};
-                text_at(small_font,x+9,steps_y+32,IM_COL32(44,52,62,255),n);
-                text_at(bold_font,x,steps_y+67,ink,titles[i]);
-                draw->AddText(small_font,16,ImVec2(origin.x+x,origin.y+steps_y+93),muted,descriptions[i],nullptr,col_w);
+        } else if (is_video_page) {
+            // Dedicated Screen Mirroring Studio when idle
+            const bool wide = stage_w >= 780;
+            const float disp_size = wide ? std::min(280.f, width * 0.40f) : 210.f;
+            const float disp_x = wide ? 42.f : (stage_w - disp_size) / 2.f;
+            const float disp_y = (wide ? 110.f : 95.f) + firewall_offset;
+            const ImVec2 tl(origin.x + disp_x, origin.y + disp_y);
+            const ImVec2 br(tl.x + disp_size, tl.y + disp_size);
+
+            ui_draw::glass_panel(draw, tl, br, 24.f, ui_draw::glass::fill_strong, 0.55f);
+            draw->AddRectFilled(ImVec2(tl.x + 28.f, tl.y + 24.f), ImVec2(br.x - 28.f, br.y - 48.f), IM_COL32(18, 24, 32, 230), 10.f);
+            draw->AddRectFilled(ImVec2(tl.x + disp_size * 0.5f - 18.f, br.y - 48.f), ImVec2(tl.x + disp_size * 0.5f + 18.f, br.y - 28.f), IM_COL32(35, 42, 54, 230));
+            draw->AddRectFilled(ImVec2(tl.x + disp_size * 0.5f - 38.f, br.y - 28.f), ImVec2(tl.x + disp_size * 0.5f + 38.f, br.y - 20.f), IM_COL32(45, 55, 70, 230), 4.f);
+            ui_draw::icon(draw, ui_draw::Icon::Screen, ImVec2(tl.x + disp_size * 0.5f - 20.f, tl.y + disp_size * 0.5f - 30.f), 40, ui_draw::blue);
+
+            const float tx = wide ? (disp_x + disp_size + 42.f) : 42.f;
+            const float right_w = std::max(260.f, stage_w - tx - 42.f);
+            float ty = wide ? (disp_y + 6.f) : (disp_y + disp_size + 24.f);
+
+            text_at(heading_font, tx, ty, ink, "Screen Mirroring Studio");
+            ty += 34.f;
+            draw->AddText(small_font, 16.f, ImVec2(origin.x + tx, origin.y + ty), muted,
+                          "Mirror your iPhone or iPad screen in 1080p60 with D3D11 hardware acceleration and OBS integration.", nullptr, right_w);
+            ty += 42.f;
+
+            // OBS & Detached Window Card
+            const ImVec2 obs_a(origin.x + tx, origin.y + ty);
+            const ImVec2 obs_b(origin.x + tx + right_w, origin.y + ty + 90.f);
+            ui_draw::glass_panel(draw, obs_a, obs_b, 14.f, ui_draw::glass::tint_blue, 0.45f);
+
+            text_at(small_font, tx + 16.f, ty + 12.f, IM_COL32(37,99,235,255), "OBS & STREAMING INTEGRATION");
+            const bool detached = live_settings_ && live_settings_->detach_mirror.load(std::memory_order_relaxed);
+            text_at(bold_font, tx + 16.f, ty + 30.f, ink, detached ? "OBS Detached Window: Active (AirGlass Mirror)" : "OBS Detached Window: In-App (Standard)");
+
+            ImGui::SetCursorPos(ImVec2(tx + 16.f, ty + 52.f));
+            if (ui_draw::text_button(detached ? "Dock back to Main Window" : "Detach for OBS Stream", ImVec2(200.f, 26.f))) {
+                if (live_settings_) {
+                    live_settings_->detach_mirror.store(!detached, std::memory_order_relaxed);
+                }
             }
+
+            ty += 104.f;
+
+            // Steps
+            text_at(bold_font, tx, ty, ink, "How to Mirror your Screen:");
+            ty += 24.f;
+            const char* mirror_steps[] = {
+                "1. Swipe down from top-right corner on iPhone to open Control Center.",
+                "2. Tap the Screen Mirroring tile (two overlapping screens).",
+                "3. Select '%s' — your phone screen displays live here."
+            };
+            char mstep3_buf[256];
+            std::snprintf(mstep3_buf, sizeof(mstep3_buf), mirror_steps[2], receiver);
+            draw->AddText(small_font, 16.f, ImVec2(origin.x + tx, origin.y + ty), muted, mirror_steps[0]); ty += 22.f;
+            draw->AddText(small_font, 16.f, ImVec2(origin.x + tx, origin.y + ty), muted, mirror_steps[1]); ty += 22.f;
+            draw->AddText(small_font, 16.f, ImVec2(origin.x + tx, origin.y + ty), muted, mstep3_buf);
+        } else if (drop_view) {
+            auto& drop_server = ap::drop::get_drop_server();
+            drop_server.start(53317);
+            const std::string drop_url = drop_server.url();
+            const auto progress = drop_server.get_transfer_progress();
+
+            const float qr_box_size = 210.f;
+            const float left_x = 42.f;
+            const float top_y = 100.f + firewall_offset;
+
+            draw_qr_code(draw, ImVec2(origin.x + left_x, origin.y + top_y), qr_box_size, drop_url);
+
+            text_at(bold_font, left_x, top_y + qr_box_size + 14.f, ink, drop_url.c_str());
+            ImGui::SetCursorPos(ImVec2(left_x, top_y + qr_box_size + 38.f));
+            if (ui_draw::text_button("Copy URL", ImVec2(90.f, 30.f))) {
+                ImGui::SetClipboardText(drop_url.c_str());
+            }
+
+            const float right_x = left_x + qr_box_size + 42.f;
+            const float right_w = std::max(280.f, stage_w - right_x - 42.f);
+
+            text_at(bold_font, right_x, top_y, ink, "Scan with iPhone Camera:");
+            const char* drop_steps[] = {
+                "1. Open Camera app on your iPhone or iPad.",
+                "2. Point at this QR code and tap the Safari prompt.",
+                "3. Send photos, videos, or files directly to this PC.",
+                "4. Or download files shared from your computer."
+            };
+            float sy = top_y + 26.f;
+            for (const char* step : drop_steps) {
+                draw->AddText(small_font, 16.f, ImVec2(origin.x + right_x, origin.y + sy), muted, step);
+                sy += 22.f;
+            }
+
+            sy += 10.f;
+
+            // Live progress load indicator in AirGlass
+            if (progress.is_active) {
+                const ImVec2 prog_a(origin.x + right_x, origin.y + sy);
+                const ImVec2 prog_b(origin.x + right_x + right_w, origin.y + sy + 68.f);
+                ui_draw::glass_panel(draw, prog_a, prog_b, 12.f, ui_draw::glass::tint_blue, 0.65f);
+
+                char receiving_hdr[256];
+                std::snprintf(receiving_hdr, sizeof(receiving_hdr), "Receiving: %s", progress.current_file.c_str());
+                draw->PushClipRect(prog_a, ImVec2(prog_b.x - 16.f, prog_b.y), true);
+                text_at(bold_font, right_x + 16.f, sy + 10.f, ui_draw::blue, receiving_hdr);
+                draw->PopClipRect();
+
+                // Progress Bar Background
+                const float bar_y = sy + 32.f;
+                const float bar_w = right_w - 32.f;
+                draw->AddRectFilled(ImVec2(origin.x + right_x + 16.f, origin.y + bar_y),
+                                    ImVec2(origin.x + right_x + 16.f + bar_w, origin.y + bar_y + 6.f),
+                                    IM_COL32(255, 255, 255, 140), 3.f);
+
+                // Progress Bar Fill
+                const float fill_w = std::max(6.f, bar_w * (progress.percent / 100.0f));
+                draw->AddRectFilled(ImVec2(origin.x + right_x + 16.f, origin.y + bar_y),
+                                    ImVec2(origin.x + right_x + 16.f + fill_w, origin.y + bar_y + 6.f),
+                                    IM_COL32(37, 99, 235, 255), 3.f);
+
+                // Progress Details
+                char prog_detail[128];
+                float mb_recv = static_cast<float>(progress.bytes_received) / (1024.f * 1024.f);
+                float mb_tot = static_cast<float>(progress.bytes_total) / (1024.f * 1024.f);
+                if (progress.bytes_total > 0) {
+                    std::snprintf(prog_detail, sizeof(prog_detail), "%.1f MB / %.1f MB (%.0f%%)", mb_recv, mb_tot, progress.percent);
+                } else {
+                    std::snprintf(prog_detail, sizeof(prog_detail), "%.1f MB received", mb_recv);
+                }
+                text_at(small_font, right_x + 16.f, sy + 44.f, muted, prog_detail);
+
+                sy += 78.f;
+            }
+
+            // Send Files to iPhone Card
+            const int shared_count = drop_server.shared_files_count();
+            const float send_card_h = (shared_count > 0) ? 82.f : 74.f;
+            const ImVec2 send_card_a(origin.x + right_x, origin.y + sy);
+            const ImVec2 send_card_b(origin.x + right_x + right_w, origin.y + sy + send_card_h);
+            ui_draw::glass_panel(draw, send_card_a, send_card_b, 14.f, ui_draw::glass::tint_blue, 0.45f);
+
+            text_at(small_font, right_x + 18.f, sy + 11.f, IM_COL32(37,99,235,255), "SEND FILES TO IPHONE");
+            if (shared_count > 0) {
+                char shared_msg[128];
+                std::snprintf(shared_msg, sizeof(shared_msg), "Ready for iOS: %d file(s) shared", shared_count);
+                text_at(small_font, right_x + 18.f, sy + 27.f, IM_COL32(58,150,112,255), shared_msg);
+            } else {
+                text_at(small_font, right_x + 18.f, sy + 27.f, muted, "Share files from PC so iPhone can download them in Safari.");
+            }
+
+            ImGui::SetCursorPos(ImVec2(right_x + 18.f, sy + 45.f));
+            if (ui_draw::text_button("Send Files to iPhone...", ImVec2(180.f, 26.f))) {
+                std::vector<std::string> chosen_files;
+                if (browse_files_to_share(window, chosen_files)) {
+                    drop_server.add_shared_files(chosen_files);
+                }
+            }
+            if (shared_count > 0) {
+                ImGui::SameLine(0, 10.f);
+                if (ui_draw::text_button("Clear Shared", ImVec2(105.f, 26.f))) {
+                    drop_server.clear_shared_files();
+                }
+            }
+
+            sy += send_card_h + 10.f;
+
+            // Save Destination Card
+            const float dest_card_h = (progress.failed_files > 0) ? 154.f : 130.f;
+            const ImVec2 card_a(origin.x + right_x, origin.y + sy);
+            const ImVec2 card_b(origin.x + right_x + right_w, origin.y + sy + dest_card_h);
+            ui_draw::glass_panel(draw, card_a, card_b, 16.f, ui_draw::glass::fill_soft, 0.45f);
+
+            text_at(small_font, right_x + 18.f, sy + 14.f, IM_COL32(62,70,80,255), "SAVE DESTINATION");
+            draw->PushClipRect(card_a, ImVec2(card_b.x - 16.f, card_b.y), true);
+            text_at(bold_font, right_x + 18.f, sy + 32.f, ink, drop_server.drop_dir().c_str());
+            draw->PopClipRect();
+
+            // Status lines
+            float stat_y = sy + 54.f;
+            if (progress.completed_files > 0) {
+                char ok_buf[256];
+                std::snprintf(ok_buf, sizeof(ok_buf), "Completed: %d file(s)  (Latest: %s)",
+                              progress.completed_files, progress.last_completed_file.c_str());
+                text_at(small_font, right_x + 18.f, stat_y, IM_COL32(58,150,112,255), ok_buf);
+                stat_y += 18.f;
+            } else if (!progress.is_active && progress.failed_files == 0) {
+                char ready_buf[128];
+                std::snprintf(ready_buf, sizeof(ready_buf), "Ready on port %d (waiting for transfers)", drop_server.port());
+                text_at(small_font, right_x + 18.f, stat_y, IM_COL32(58,150,112,255), ready_buf);
+                stat_y += 18.f;
+            }
+
+            // Failed files counter
+            if (progress.failed_files > 0) {
+                char fail_buf[256];
+                std::snprintf(fail_buf, sizeof(fail_buf), "Failed: %d file(s)  (%s)",
+                              progress.failed_files, progress.last_error.c_str());
+                text_at(small_font, right_x + 18.f, stat_y, IM_COL32(220, 38, 38, 255), fail_buf);
+                stat_y += 18.f;
+            }
+
+            ImGui::SetCursorPos(ImVec2(right_x + 18.f, stat_y + 4.f));
+            if (ui_draw::text_button("Change Folder...", ImVec2(130.f, 30.f))) {
+                std::string chosen;
+                if (browse_drop_folder(window, drop_server.drop_dir(), chosen)) {
+                    drop_server.set_drop_dir(chosen);
+                    preferences.drop_directory = chosen;
+                    publish_preferences();
+                }
+            }
+            ImGui::SameLine(0, 10.f);
+            if (ui_draw::text_button("Open Downloads Folder", ImVec2(175.f, 30.f))) {
+                drop_server.open_drop_folder();
+            }
+
+            if (progress.failed_files > 0) {
+                ImGui::SameLine(0, 10.f);
+                if (ui_draw::text_button("Clear Errors", ImVec2(100.f, 30.f))) {
+                    drop_server.reset_failures();
+                }
+            }
+        } else {
+            // Master Home Dashboard
+            const float hero_y = (stage_h < 720 ? 80.f : 92.f) + firewall_offset;
+
+            // Header & Welcome
+            center_text(heading_font, hero_y, ink, "Welcome to AirGlass");
+            center_text(io.FontDefault, hero_y + 36.f, muted, "High-performance AirPlay receiver and local file transfer for Windows.");
+
+            // Central Receiver Badge
+            const float card_w = std::min(460.f, width);
+            const float card_x = (stage_w - card_w) / 2.f;
+            const float card_y = hero_y + 68.f;
+            const ImVec2 cp(origin.x + card_x, origin.y + card_y);
+            ui_draw::glass_panel(draw, cp, ImVec2(cp.x + card_w, cp.y + 70.f), 16.f, ui_draw::glass::fill_soft, 0.55f);
+
+            text_at(small_font, card_x + 18.f, card_y + 12.f, IM_COL32(62,70,80,255), "AIRPLAY RECEIVER ACTIVE ON WI-FI");
+            draw->PushClipRect(cp, ImVec2(cp.x + card_w - 56.f, cp.y + 70.f), true);
+            text_at(receiver_font, card_x + 18.f, card_y + 32.f, ink, receiver);
+            draw->PopClipRect();
+
+            ImGui::SetCursorPos(ImVec2(card_x + card_w - 52.f, card_y + 18.f));
+            if (ui_draw::icon_button("##rename", ui_draw::Icon::Settings, "Receiver settings")) ui.settings_open = true;
+
+            // 3 Interactive Action Feature Cards in a row
+            const float grid_y = card_y + 86.f;
+            const float col_w = (width - 24.f) / 3.f;
+
+            // Feature Card 1: Screen Mirroring
+            const float c1_x = 42.f;
+            const ImVec2 c1_a(origin.x + c1_x, origin.y + grid_y);
+            const ImVec2 c1_b(origin.x + c1_x + col_w, origin.y + grid_y + 138.f);
+            ui_draw::glass_panel(draw, c1_a, c1_b, 14.f, ui_draw::glass::fill_soft, 0.45f);
+            ui_draw::icon(draw, ui_draw::Icon::Screen, ImVec2(origin.x + c1_x + 16.f, origin.y + grid_y + 14.f), 22, ui_draw::blue);
+            text_at(bold_font, c1_x + 46.f, grid_y + 15.f, ink, "Screen Mirror");
+            draw->AddText(small_font, 14.f, ImVec2(origin.x + c1_x + 16.f, origin.y + grid_y + 44.f), muted,
+                          "1080p60 low-latency display mirroring. OBS detached window ready.", nullptr, col_w - 32.f);
+            ImGui::SetCursorPos(ImVec2(c1_x + 16.f, grid_y + 96.f));
+            if (ui_draw::text_button("Open Mirroring", ImVec2(col_w - 32.f, 28.f))) {
+                ui.page = 2;
+            }
+
+            // Feature Card 2: Music & Audio
+            const float c2_x = 42.f + col_w + 12.f;
+            const ImVec2 c2_a(origin.x + c2_x, origin.y + grid_y);
+            const ImVec2 c2_b(origin.x + c2_x + col_w, origin.y + grid_y + 138.f);
+            ui_draw::glass_panel(draw, c2_a, c2_b, 14.f, ui_draw::glass::fill_soft, 0.45f);
+            ui_draw::icon(draw, ui_draw::Icon::Music, ImVec2(origin.x + c2_x + 16.f, origin.y + grid_y + 14.f), 22, ui_draw::blue);
+            text_at(bold_font, c2_x + 46.f, grid_y + 15.f, ink, "Music Player");
+            draw->AddText(small_font, 14.f, ImVec2(origin.x + c2_x + 16.f, origin.y + grid_y + 44.f), muted,
+                          "Lossless WASAPI audio master clock with zero delay.", nullptr, col_w - 32.f);
+            ImGui::SetCursorPos(ImVec2(c2_x + 16.f, grid_y + 96.f));
+            if (ui_draw::text_button("Open Music", ImVec2(col_w - 32.f, 28.f))) {
+                ui.page = 1;
+            }
+
+            // Feature Card 3: Web Drop
+            const float c3_x = 42.f + (col_w + 12.f) * 2.f;
+            const ImVec2 c3_a(origin.x + c3_x, origin.y + grid_y);
+            const ImVec2 c3_b(origin.x + c3_x + col_w, origin.y + grid_y + 138.f);
+            ui_draw::glass_panel(draw, c3_a, c3_b, 14.f, ui_draw::glass::fill_soft, 0.45f);
+            ui_draw::icon(draw, ui_draw::Icon::Transfer, ImVec2(origin.x + c3_x + 16.f, origin.y + grid_y + 14.f), 22, ui_draw::blue);
+            text_at(bold_font, c3_x + 46.f, grid_y + 15.f, ink, "Web Drop");
+            draw->AddText(small_font, 14.f, ImVec2(origin.x + c3_x + 16.f, origin.y + grid_y + 44.f), muted,
+                          "Instant two-way file & photo transfer via Wi-Fi QR code.", nullptr, col_w - 32.f);
+            ImGui::SetCursorPos(ImVec2(c3_x + 16.f, grid_y + 96.f));
+            if (ui_draw::text_button("Open Web Drop", ImVec2(col_w - 32.f, 28.f))) {
+                ui.page = 3;
+            }
+
+            const float steps_y = grid_y + 152.f;
             const char* help="My PC isn't showing up";
             const float help_w=small_font->CalcTextSizeA(16,10000,0,help).x;
-            ImGui::SetCursorPos(ImVec2(42.f+(stage_w-84.f-help_w)*0.5f,steps_y+157));
+            ImGui::SetCursorPos(ImVec2(42.f+(stage_w-84.f-help_w)*0.5f,steps_y+10.f));
             if (ui_draw::surface("##connection_help",ImVec2(help_w,22))) ImGui::OpenPopup("Connection help");
             const ImVec2 hp=ImGui::GetItemRectMin();
             draw->AddText(small_font,16,hp,muted,help); draw->AddLine(ImVec2(hp.x,hp.y+17),ImVec2(hp.x+help_w,hp.y+17),muted);

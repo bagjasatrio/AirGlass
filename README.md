@@ -7,10 +7,10 @@
 Mirror an iPhone or iPad to your PC at full 1080p, with audio that stays in sync, on hardware from a decade ago.
 No Bonjour install. No account. No watermark. No silent downgrade.
 
-[![Download](https://img.shields.io/badge/download-v0.2.0%20win64-blue?style=flat-square)](https://github.com/bagjasatrio/AirGlass/releases/latest)
+[![Download](https://img.shields.io/badge/download-v0.3.0%20win64-blue?style=flat-square)](https://github.com/bagjasatrio/AirGlass/releases/latest)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6?style=flat-square)](#requirements)
-[![Status](https://img.shields.io/badge/status-v0.1%20%C2%B7%20working-orange?style=flat-square)](#status)
+[![Status](https://img.shields.io/badge/status-v0.3.0%20%C2%B7%20stable-green?style=flat-square)](#status)
 [![Built with](https://img.shields.io/badge/C%2B%2B20-D3D11%20%C2%B7%20FFmpeg%20%C2%B7%20WASAPI-informational?style=flat-square)](#build)
 
 ![AirGlass mirroring an iPhone home screen to Windows](docs/screenshots/mirroring.png)
@@ -62,13 +62,22 @@ To deploy it yourself: `cd site && npx vercel link --project airglass && npx ver
 
 ## Quick start
 
-**No build needed** — download `AirGlass-0.2-win64.zip` from [Releases](https://github.com/bagjasatrio/AirGlass/releases/latest), unzip anywhere, run `airglass.exe`. The archive carries every runtime DLL, so nothing else has to be installed. (Windows SmartScreen warns once because the binary is unsigned: *More info → Run anyway*.)
+**No build needed** — download `AirGlass-0.3-win64.zip` from [Releases](https://github.com/bagjasatrio/AirGlass/releases/latest), unzip anywhere, run `airglass.exe`. The archive carries every runtime DLL, so nothing else has to be installed. (Windows SmartScreen warns once because the binary is unsigned: *More info → Run anyway*.)
 
 1. Run `airglass.exe`. Pick a quality preset when the chooser appears.
 2. On the iPhone: **Control Center → Screen Mirroring → AirGlass**.
 3. The mirror opens in its own borderless window titled **AirGlass Mirror**.
 
 That is the whole flow. No Bonjour, no Apple runtime, no firewall rule to add by hand — the app checks and offers the fix in one click.
+
+## Web Drop (Two-Way LAN Transfer) & Music Player
+
+Starting with **v0.3.0**, AirGlass includes local wireless file drop and a dedicated lossless audio player:
+
+- **Two-Way Web Drop**: Scan the QR code on the desktop interface to open the mobile drop page in Safari. Send photos, 4K videos, or files directly to your PC, or send files from PC to iOS.
+- **Custom Save Destination**: Change download destination anytime without leaving temp files in user folders. Outgoing shared files are kept in an isolated staging cache.
+- **Anti-Sleep Keep-Alive & Auto-Retry**: Safari uploads leverage the Screen Wake Lock API and a silent video keep-alive with automatic 3x retries to prevent connection timeouts when the phone display sleeps.
+- **Lossless AirPlay Audio Sink**: Play Spotify, Apple Music, YouTube or web audio straight to PC speakers with WASAPI zero-latency playback.
 
 ## Presets
 
@@ -192,7 +201,14 @@ The build links prebuilt FFmpeg instead of compiling it from source (20–45 min
 
 ## Status
 
-v0.1 — working end to end on a real iPhone: mirror, detached mirror window, presets, audio path. Not yet: code signing (SmartScreen warns on the unsigned binary), installer, multi-device support.
+v0.3.0 — production-ready local AirPlay mirroring, lossless audio streaming, and two-way Web Drop file transfer.
+
+- [x] 1080p60/1080p30/720p60 presets with hardware acceleration (D3D11VA).
+- [x] Detached borderless capture window for OBS and clean monitor layouts.
+- [x] Zero-latency WASAPI event-driven audio sink.
+- [x] Two-way Web Drop LAN file transfer (custom destination, anti-sleep wake lock, isolated staging).
+- [x] Dedicated Music view with DAAP tag reader and raw PCM fallback.
+- [ ] Code signing certificate (binary remains unsigned; SmartScreen bypass required).
 
 Known limits that are protocol facts, not bugs:
 

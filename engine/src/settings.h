@@ -15,16 +15,17 @@ struct UiPreferences {
     int window_width = 1220, window_height = 800;
     bool window_maximized = false;
     std::string recording_directory;
+    std::string drop_directory;
     int recording_codec = 0;   // H.264 / H.265
     int recording_encoder = 0; // Auto / GPU / CPU
     int recording_bitrate = 8;
 
     bool operator==(const UiPreferences& other) const {
         return std::tie(diagnostics, window_placement_valid, window_x, window_y,
-                        window_width, window_height, window_maximized, recording_directory,
+                        window_width, window_height, window_maximized, recording_directory, drop_directory,
                         recording_codec, recording_encoder, recording_bitrate) ==
                std::tie(other.diagnostics, other.window_placement_valid, other.window_x, other.window_y,
-                        other.window_width, other.window_height, other.window_maximized, other.recording_directory,
+                        other.window_width, other.window_height, other.window_maximized, other.recording_directory, other.drop_directory,
                         other.recording_codec, other.recording_encoder, other.recording_bitrate);
     }
 };

@@ -17,6 +17,7 @@
 #include "net/socket.h"
 #include "settings.h"
 #include "platform/single_instance.h"
+#include "drop/web_drop_server.h"
 #include "platform/firewall.h"
 #include "usb/usb_supervisor.h"
 #include "video/video_renderer.h"
@@ -475,6 +476,12 @@ int main(int argc, char** argv) {
         ctx.hls_local_port = hls_server.port();
     }
 
+    // AirGlass: Start local Web Drop server for instant file transfer
+    if (!saved.ui.drop_directory.empty()) {
+        ap::drop::get_drop_server().set_drop_dir(saved.ui.drop_directory);
+    }
+    ap::drop::get_drop_server().start(53317);
+
     ap::mdns::MdnsService mdns;
     if (!mdns.start(ctx, server.port())) {
         LOG_WARN << "mDNS not available — receiver won't auto-appear on iOS";
@@ -538,6 +545,7 @@ int main(int argc, char** argv) {
     LOG_INFO << "Shutting down... (g_stop=" << g_stop.load()
              << " user_closed=" << renderer.user_closed() << ")";
     // Withdraw discovery and interrupt sessions before stopping peripherals.
+    ap::drop::get_drop_server().stop();
     server.stop();
     mdns.stop();
     usb_supervisor.stop();

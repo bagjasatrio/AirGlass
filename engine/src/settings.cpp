@@ -92,6 +92,7 @@ PersistentSettings load_settings(const std::filesystem::path& path) {
                 }
             }
             else if (key == "recording_directory") s.ui.recording_directory = val;
+            else if (key == "drop_directory") s.ui.drop_directory = val;
             else if (key == "recording_codec") {
                 const int n = std::stoi(val);
                 if (n >= 0 && n <= 1) s.ui.recording_codec = n;
@@ -149,6 +150,7 @@ bool save_settings(const PersistentSettings& s, const std::filesystem::path& pat
         << "window_height=" << s.ui.window_height << '\n'
         << "window_maximized=" << s.ui.window_maximized << '\n'
         << "recording_directory=" << s.ui.recording_directory << '\n'
+        << "drop_directory=" << s.ui.drop_directory << '\n'
         << "recording_codec=" << s.ui.recording_codec << '\n'
         << "recording_encoder=" << s.ui.recording_encoder << '\n'
         << "recording_bitrate=" << s.ui.recording_bitrate << '\n';

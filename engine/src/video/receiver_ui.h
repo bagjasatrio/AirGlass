@@ -116,7 +116,7 @@ inline void glass_panel(ImDrawList* d, ImVec2 a, ImVec2 b, float round = glass::
 inline void glass_pill(ImDrawList* d, ImVec2 a, ImVec2 b, ImU32 tint) {
     glass_panel(d, a, b, (b.y - a.y) * 0.5f, tint, 0.45f);
 }
-enum class Icon { Cast, Home, Music, Screen, Settings, Phone, Previous, Next, Play, Pause, Close, Minimize, Maximize, Fullscreen, Record };
+enum class Icon { Cast, Home, Music, Screen, Settings, Phone, Previous, Next, Play, Pause, Close, Minimize, Maximize, Fullscreen, Record, Transfer };
 
 inline void icon(ImDrawList* d, Icon kind, ImVec2 p, float size, ImU32 color) {
     auto v = [&](float x, float y) { return ImVec2(p.x + x * size / 24, p.y + y * size / 24); };
@@ -158,6 +158,9 @@ inline void icon(ImDrawList* d, Icon kind, ImVec2 p, float size, ImU32 color) {
         d->AddTriangleFilled(v(6,5),v(16,12),v(6,19),color); stroke(19,5,19,19); break;
     case Icon::Play: d->AddTriangleFilled(v(9,5),v(20,12),v(9,19),color); break;
     case Icon::Pause: d->AddRectFilled(v(7,5),v(10,19),color,1); d->AddRectFilled(v(14,5),v(17,19),color,1); break;
+    case Icon::Transfer:
+        stroke(4,8,19,8); stroke(15,4,19,8); stroke(15,12,19,8);
+        stroke(20,16,5,16); stroke(9,12,5,16); stroke(9,20,5,16); break;
     case Icon::Close: stroke(7,7,17,17); stroke(17,7,7,17); break;
     case Icon::Minimize: stroke(7,12,17,12); break;
     case Icon::Maximize: d->AddRect(v(7,7),v(17,17),color,0,0,1.2f); break;
